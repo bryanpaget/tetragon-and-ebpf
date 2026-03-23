@@ -44,10 +44,8 @@ De la recherche au déploiement prêt pour la production.
 
 ![bg left:33%](./img/canada-1.png)
 
-**Tetragon :** Un outil d'observabilité de sécurité conscient de Kubernetes exploitant eBPF pour une visibilité approfondie sur :
-- L'activité des processus
-- Les opérations sur les fichiers
-- Les connexions réseau
+**Tetragon :** Observabilité de sécurité consciente de Kubernetes exploitant eBPF pour :
+- Visibilité sur l'activité des processus, fichiers et réseau
 
 Considérez-le comme un **système de caméras de sécurité pour conteneurs**—surveillant chaque action au niveau du noyau, en temps réel.
 
@@ -55,7 +53,7 @@ Considérez-le comme un **système de caméras de sécurité pour conteneurs**�
 - Conformité aux exigences eBPF
 - Visibilité au niveau du noyau impossible avec les outils utilisateurs
 - Natif Kubernetes via les CRD
-- Léger : <1% de surcharge CPU, ~100-200 MiB de mémoire par nœud
+- <1% de surcharge CPU, ~100-200 MiB de mémoire par nœud
 
 <blockquote>
 Surveillance de sécurité depuis le noyau.
@@ -120,10 +118,6 @@ Pour la surveillance des menaces en temps réel de Tetragon, eBPF attache de pet
 - `cgroup-bpf` : Points d'attache des appels système par conteneur
 - `LSM` : Points d'application de la politique de sécurité
 
-**Carte eBPF :** Structures de données résidentes dans le noyau pour la communication
-
-**Vérificateur :** Analyse statique assurant la sécurité des programmes
-
 <blockquote>
 Code sûr et efficace s'exécutant dans le noyau.
 </blockquote>
@@ -158,15 +152,14 @@ Code prouvé sûr dans le noyau.
 
 ![bg left:33%](./img/canada-1.png)
 
-**Le goulot d'étranglement du mouvement des données :** Déplacer des données entre les composants coûte souvent plus que le calcul lui-même.
+**Goulot d'étranglement du mouvement des données :** Déplacer des données entre les composants coûte souvent plus que le calcul.
 
-**Principe :** La latence et l'énergie sont minimisées lorsque le calcul se produit **aussi près que possible de l'endroit où les données résident**.
+**Principe :** La latence est minimisée lorsque le calcul se produit **aussi près que possible de l'endroit où les données résident**.
 
-*Pourquoi cela tient :* Les données traversent des interfaces avec une latence croissante :
-- Caches sur puce → mémoire principale → stockage → réseau
+Les données traversent : caches sur puce → mémoire principale → stockage → réseau
 
 **Manifestations :**
-- Architecture mémoire unifiée (Apple M-series, AMD Strix Halo) — élimine la surcharge du bus PCIe
+- Architecture mémoire unifiée (Apple M-series) — élimine la surcharge PCIe
 - Techniques de zéro copie et contournement du noyau
 - **eBPF : élimine la copie noyau→espace utilisateur pour les événements de sécurité**
 
@@ -244,7 +237,7 @@ Visibilité approfondie sur l'activité du système.
 
 ![bg left:33%](./img/canada-1.png)
 
-```yaml
+```
 apiVersion: cilium.io/v1alpha1
 kind: TracingPolicy
 metadata:
@@ -278,7 +271,7 @@ Politiques de sécurité déclaratives comme ressources Kubernetes.
 
 Lorsque la politique se déclenche, Tetragon exporte des événements JSON structurés :
 
-```json
+```
 {
   "node": "worker-node-01",
   "time": "2026-03-23T14:32:15.123Z",
@@ -309,29 +302,19 @@ Les événements sont envoyés vers les destinations configurées : stdout, ELK,
 ![bg left:33%](./img/canada-1.png)
 
 **Prérequis :**
-- Accès à la grappe DEV de la Zone
-- `kubectl` configuré, Helm 3 installé
+- Accès à la grappe DEV de la Zone, `kubectl`, Helm 3
 - Noyau Linux ≥ 4.19 (5.4+ recommandé)
 - Support BTF pour la compatibilité CO-RE
 
 **Vérification du noyau :**
-```bash
-uname -r
-ls /sys/kernel/btf/vmlinux
+```
+uname -r && ls /sys/kernel/btf/vmlinux
 ```
 
 **Installation :**
-```bash
-helm repo add cilium https://helm.cilium.io
-kubectl create namespace tetragon
-helm upgrade --install tetragon cilium/tetragon \
-  --namespace tetragon
 ```
-
-**Vérification :**
-```bash
-kubectl -n tetragon get pods
-kubectl -n tetragon logs -l app.kubernetes.io/name=tetragon
+helm repo add cilium https://helm.cilium.io
+helm install tetragon cilium/tetragon -n tetragon
 ```
 
 <blockquote>
@@ -350,10 +333,9 @@ De la recherche à la validation.
 2. **Déploiement DEV :** Exécuter le déploiement DEV de la Zone
 3. **Documentation :** Partager les découvertes avec l'équipe
 
-**Questions à investiguer :**
+**Questions :**
 - Surcharge de performance sous charge de production ?
-- Interaction avec les outils de sécurité existants ?
-- Chemin de mise à niveau pour les programmes eBPF ?
+- Intégration avec les outils de sécurité existants ?
 - Ingestion des événements dans la pile de surveillance (ELK, Splunk) ?
 
 <blockquote>
@@ -371,8 +353,6 @@ Voie claire à suivre avec des questions de recherche ouvertes.
 - Tetragon fournit l'observabilité de sécurité nécessaire
 - eBPF fournit la technologie de noyau sûre et efficace
 - Le Principe de Proximité explique *pourquoi* eBPF est si puissant
-
-**Insight clé :** Déplacer le calcul là où les données vivent atteint des performances et des aperçus impossibles avec des approches traditionnelles en couches.
 
 **Voie à suivre :** Porter le chart → Déployer en DEV → Valider → Partager les découvertes
 

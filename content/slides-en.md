@@ -44,18 +44,16 @@ From research to production-ready deployment.
 
 ![bg left:33%](./img/canada-1.png)
 
-**Tetragon:** A Kubernetes-aware security observability tool leveraging eBPF for deep visibility into:
-- Process activity
-- File operations
-- Network connections
+**Tetragon:** Kubernetes-aware security observability leveraging eBPF for:
+- Process, file, and network activity visibility
 
 Think of it as a **security camera system for containers**—watching every action at the kernel level, in real-time.
 
 **Key Benefits:**
 - Corporate compliance with eBPF requirements
 - Kernel-level visibility impossible with userspace tools
-- Kubernetes native via Custom Resource Definitions
-- Lightweight: <1% CPU overhead, ~100-200 MiB memory per node
+- Kubernetes native via CRDs
+- <1% CPU overhead, ~100-200 MiB memory per node
 
 <blockquote>
 Security monitoring from the kernel up.
@@ -120,10 +118,6 @@ For Tetragon's real-time threat monitoring, eBPF attaches small programs to kern
 - `cgroup-bpf`: Per-container system call hooks
 - `LSM`: Security policy enforcement points
 
-**eBPF Map:** Kernel-resident data structures for communication
-
-**Verifier:** Static analysis ensuring program safety
-
 <blockquote>
 Safe, efficient code running in the kernel.
 </blockquote>
@@ -158,16 +152,15 @@ Provably safe code in the kernel.
 
 ![bg left:33%](./img/canada-1.png)
 
-**The Data Movement Bottleneck:** Moving data between components often costs more than computation itself.
+**Data Movement Bottleneck:** Moving data between components often costs more than computation.
 
-**Principle:** Latency and energy are minimized when computation occurs **as close as possible to where data resides**.
+**Principle:** Latency minimized when computation occurs **as close as possible to where data resides**.
 
-*Why this holds:* Data traverses interfaces with increasing latency:
-- On-chip caches → main memory → storage → network
+Data traverses: on-chip caches → main memory → storage → network
 
 **Manifestations:**
-- Unified Memory Architecture (Apple M-series, AMD Strix Halo) — eliminates PCIe bus overhead
-- Zero-copy and kernel bypass techniques
+- Unified Memory (Apple M-series) — eliminates PCIe overhead
+- Zero-copy/kernel bypass techniques
 - **eBPF: eliminates kernel→userspace copy for security events**
 
 <blockquote>
@@ -244,7 +237,7 @@ Deep visibility into system activity.
 
 ![bg left:33%](./img/canada-1.png)
 
-```yaml
+```
 apiVersion: cilium.io/v1alpha1
 kind: TracingPolicy
 metadata:
@@ -278,7 +271,7 @@ Declarative security policies as Kubernetes resources.
 
 When the policy triggers, Tetragon exports structured JSON events:
 
-```json
+```
 {
   "node": "worker-node-01",
   "time": "2026-03-23T14:32:15.123Z",
@@ -309,29 +302,19 @@ Structured events ready for analysis.
 ![bg left:33%](./img/canada-1.png)
 
 **Prerequisites:**
-- Zone DEV cluster access
-- `kubectl` configured, Helm 3 installed
+- Zone DEV cluster access, `kubectl`, Helm 3
 - Linux kernel ≥ 4.19 (5.4+ recommended)
 - BTF support for CO-RE compatibility
 
 **Kernel check:**
-```bash
-uname -r
-ls /sys/kernel/btf/vmlinux
+```
+uname -r && ls /sys/kernel/btf/vmlinux
 ```
 
-**Installation:**
-```bash
+**Install:**
+```
 helm repo add cilium https://helm.cilium.io
-kubectl create namespace tetragon
-helm upgrade --install tetragon cilium/tetragon \
-  --namespace tetragon
-```
-
-**Verification:**
-```bash
-kubectl -n tetragon get pods
-kubectl -n tetragon logs -l app.kubernetes.io/name=tetragon
+helm install tetragon cilium/tetragon -n tetragon
 ```
 
 <blockquote>
@@ -350,10 +333,9 @@ From research to validation.
 2. **DEV Deployment:** Execute Zone DEV deployment
 3. **Documentation:** Share findings with team
 
-**Questions for Investigation:**
+**Questions:**
 - Performance overhead under production load?
-- Interaction with existing security tools?
-- Upgrade path for eBPF programs across kernel versions?
+- Integration with existing security tools?
 - Event ingestion into monitoring stack (ELK, Splunk)?
 
 <blockquote>
@@ -371,8 +353,6 @@ Clear path forward with open research questions.
 - Tetragon provides needed security observability
 - eBPF provides safe, efficient kernel technology
 - Principle of Proximity explains *why* eBPF is so powerful
-
-**Key Insight:** Moving computation to where data lives achieves performance and insight impossible with traditional layered approaches.
 
 **Path Forward:** Port chart → Deploy in DEV → Validate → Share findings
 
