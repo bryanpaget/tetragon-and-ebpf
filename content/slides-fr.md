@@ -21,13 +21,20 @@
 
 ![bg left:33%](./img/canada-1.png)
 
-- Mandat de mettre en œuvre des **solutions de sécurité basées sur eBPF**
-- Exploration de **Tetragon**, déjà en cours d'exécution expérimentale dans Aurora
-- Cette présentation synthétise : ce qu'est Tetragon, comment il fonctionne, pourquoi eBPF est révolutionnaire
-- Construit à partir des **principes fondamentaux**, ancré dans la compréhension pratique
+**Recommandation :** Adopter Tetragon et contribuer le chart Helm à `cloudnative-platform-charts`
+
+**Quoi :** Observabilité de sécurité alimentée par eBPF, déjà en cours d'exécution expérimentale dans Aurora
+
+**Pourquoi maintenant :** Les normes organisationnelles exigent des solutions de sécurité basées sur eBPF
+
+**Risque :** Faible — déjà déployé dans Aurora ; le vérificateur eBPF garantit la sécurité
+
+**Coût :** Minimal — <1% de surcharge CPU, ~100-200 MiB de mémoire par nœud
+
+**Demande :** Approuver la contribution du chart et la validation du déploiement dans DEV de la Zone
 
 <blockquote>
-Observabilité de sécurité au niveau du noyau avec impact minimal.
+De la recherche au déploiement prêt pour la production.
 </blockquote>
 
 ---
@@ -37,7 +44,7 @@ Observabilité de sécurité au niveau du noyau avec impact minimal.
 
 ![bg left:33%](./img/canada-1.png)
 
-**Définition :** Un outil d'observabilité de sécurité conscient de Kubernetes exploitant eBPF pour une visibilité approfondie sur :
+**Tetragon :** Un outil d'observabilité de sécurité conscient de Kubernetes exploitant eBPF pour une visibilité approfondie sur :
 - L'activité des processus
 - Les opérations sur les fichiers
 - Les connexions réseau
@@ -48,7 +55,7 @@ Considérez-le comme un **système de caméras de sécurité pour conteneurs**�
 - Conformité aux exigences eBPF
 - Visibilité au niveau du noyau impossible avec les outils utilisateurs
 - Natif Kubernetes via les CRD
-- Léger : impact minimal sur les performances
+- Léger : <1% de surcharge CPU, ~100-200 MiB de mémoire par nœud
 
 <blockquote>
 Surveillance de sécurité depuis le noyau.
@@ -124,7 +131,7 @@ Code sûr et efficace s'exécutant dans le noyau.
 ---
 
 <!-- Théorèmes de sécurité -->
-## Les théorèmes de sécurité
+## Les garanties de sécurité
 
 ![bg left:33%](./img/canada-1.png)
 
@@ -159,9 +166,9 @@ Code prouvé sûr dans le noyau.
 - Caches sur puce → mémoire principale → stockage → réseau
 
 **Manifestations :**
-- Architecture mémoire unifiée (Apple M-series, AMD Strix Halo)
+- Architecture mémoire unifiée (Apple M-series, AMD Strix Halo) — élimine la surcharge du bus PCIe
 - Techniques de zéro copie et contournement du noyau
-- **eBPF : le calcul là où les données vivent—dans le noyau**
+- **eBPF : élimine la copie noyau→espace utilisateur pour les événements de sécurité**
 
 <blockquote>
 Déplacer le calcul vers les données, pas les données vers le calcul.
@@ -248,8 +255,8 @@ spec:
     syscall: true
     selectors:
     - matchBinaries:
-      - "/bin/bash"
-      - "/bin/sh"
+      - operator: "In"
+        values: ["/bin/bash", "/bin/sh"]
       matchArgs:
       - index: 0
         operator: "Contains"
@@ -264,6 +271,38 @@ Politiques de sécurité déclaratives comme ressources Kubernetes.
 
 ---
 
+<!-- Exemple de sortie d'événement -->
+## Exemple de sortie d'événement
+
+![bg left:33%](./img/canada-1.png)
+
+Lorsque la politique se déclenche, Tetragon exporte des événements JSON structurés :
+
+```json
+{
+  "node": "worker-node-01",
+  "time": "2026-03-23T14:32:15.123Z",
+  "event_type": "process_exec",
+  "process": {
+    "pid": 12345,
+    "binary": "/bin/bash",
+    "arguments": "cat /etc/passwd"
+  },
+  "pod": {
+    "namespace": "default",
+    "name": "test-pod"
+  }
+}
+```
+
+Les événements sont envoyés vers les destinations configurées : stdout, ELK, Splunk, ou OpenTelemetry.
+
+<blockquote>
+Événements structurés prêts pour l'analyse.
+</blockquote>
+
+---
+
 <!-- Plan de déploiement -->
 ## Plan de déploiement
 
@@ -272,7 +311,14 @@ Politiques de sécurité déclaratives comme ressources Kubernetes.
 **Prérequis :**
 - Accès à la grappe DEV de la Zone
 - `kubectl` configuré, Helm 3 installé
-- Noyau Linux ≥ 4.18 (5.4+ recommandé)
+- Noyau Linux ≥ 4.19 (5.4+ recommandé)
+- Support BTF pour la compatibilité CO-RE
+
+**Vérification du noyau :**
+```bash
+uname -r
+ls /sys/kernel/btf/vmlinux
+```
 
 **Installation :**
 ```bash

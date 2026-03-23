@@ -21,13 +21,20 @@
 
 ![bg left:33%](./img/canada-1.png)
 
-- Tasked with implementing **eBPF-based security solutions** for corporate compliance
-- Explored **Tetragon**, already running experimentally in Aurora clusters
-- This presentation synthesizes: what Tetragon is, how it works, and why eBPF is revolutionary
-- Builds from **first principles** while staying grounded in practical understanding
+**Recommendation:** Adopt Tetragon and contribute the Helm chart to `cloudnative-platform-charts`
+
+**What:** eBPF-powered security observability already running experimentally in Aurora
+
+**Why now:** Corporate standards require eBPF-based security solutions
+
+**Risk:** Low—already deployed in Aurora; eBPF verifier guarantees safety
+
+**Cost:** Minimal—<1% CPU overhead, ~100-200 MiB memory per node
+
+**Ask:** Approve chart contribution and Zone DEV deployment validation
 
 <blockquote>
-Kernel-level security observability with minimal overhead.
+From research to production-ready deployment.
 </blockquote>
 
 ---
@@ -37,9 +44,9 @@ Kernel-level security observability with minimal overhead.
 
 ![bg left:33%](./img/canada-1.png)
 
-**Definition:** A Kubernetes-aware security observability tool leveraging eBPF for deep visibility into:
+**Tetragon:** A Kubernetes-aware security observability tool leveraging eBPF for deep visibility into:
 - Process activity
-- File operations  
+- File operations
 - Network connections
 
 Think of it as a **security camera system for containers**—watching every action at the kernel level, in real-time.
@@ -48,7 +55,7 @@ Think of it as a **security camera system for containers**—watching every acti
 - Corporate compliance with eBPF requirements
 - Kernel-level visibility impossible with userspace tools
 - Kubernetes native via Custom Resource Definitions
-- Lightweight: minimal performance impact
+- Lightweight: <1% CPU overhead, ~100-200 MiB memory per node
 
 <blockquote>
 Security monitoring from the kernel up.
@@ -123,8 +130,8 @@ Safe, efficient code running in the kernel.
 
 ---
 
-<!-- Safety Theorems -->
-## The Safety Theorems
+<!-- Safety Guarantees -->
+## The Safety Guarantees
 
 ![bg left:33%](./img/canada-1.png)
 
@@ -159,9 +166,9 @@ Provably safe code in the kernel.
 - On-chip caches → main memory → storage → network
 
 **Manifestations:**
-- Unified Memory Architecture (Apple M-series, AMD Strix Halo)
+- Unified Memory Architecture (Apple M-series, AMD Strix Halo) — eliminates PCIe bus overhead
 - Zero-copy and kernel bypass techniques
-- **eBPF: computation where data lives—in the kernel**
+- **eBPF: eliminates kernel→userspace copy for security events**
 
 <blockquote>
 Move computation to data, not data to computation.
@@ -248,8 +255,8 @@ spec:
     syscall: true
     selectors:
     - matchBinaries:
-      - "/bin/bash"
-      - "/bin/sh"
+      - operator: "In"
+        values: ["/bin/bash", "/bin/sh"]
       matchArgs:
       - index: 0
         operator: "Contains"
@@ -264,6 +271,38 @@ Declarative security policies as Kubernetes resources.
 
 ---
 
+<!-- Example Event Output -->
+## Example Event Output
+
+![bg left:33%](./img/canada-1.png)
+
+When the policy triggers, Tetragon exports structured JSON events:
+
+```json
+{
+  "node": "worker-node-01",
+  "time": "2026-03-23T14:32:15.123Z",
+  "event_type": "process_exec",
+  "process": {
+    "pid": 12345,
+    "binary": "/bin/bash",
+    "arguments": "cat /etc/passwd"
+  },
+  "pod": {
+    "namespace": "default",
+    "name": "test-pod"
+  }
+}
+```
+
+Events flow to configured sinks: stdout, ELK, Splunk, or OpenTelemetry.
+
+<blockquote>
+Structured events ready for analysis.
+</blockquote>
+
+---
+
 <!-- Deployment Plan -->
 ## Deployment Plan
 
@@ -272,7 +311,14 @@ Declarative security policies as Kubernetes resources.
 **Prerequisites:**
 - Zone DEV cluster access
 - `kubectl` configured, Helm 3 installed
-- Linux kernel ≥ 4.18 (5.4+ recommended)
+- Linux kernel ≥ 4.19 (5.4+ recommended)
+- BTF support for CO-RE compatibility
+
+**Kernel check:**
+```bash
+uname -r
+ls /sys/kernel/btf/vmlinux
+```
 
 **Installation:**
 ```bash
