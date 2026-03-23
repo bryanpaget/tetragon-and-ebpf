@@ -86,7 +86,7 @@ Pour comprendre Tetragon, nous devons comprendre eBPF.
 - **1992 :** Berkeley Packet Filter (BPF) pour le filtrage de paquets
 - **2014 :** BPF étendu (eBPF) généralisé au-delà du réseau
 
-**Définition :** Une **machine virtuelle dans le noyau à usage général** qui exécute en toute sécurité des programmes fournis par l'utilisateur avec :
+**eBPF :** Une machine virtuelle dans le noyau à usage général qui exécute en toute sécurité des programmes fournis par l'utilisateur avec :
 - Un jeu d'instructions bien défini
 - Un vérificateur garantissant la sécurité
 - Un accès aux données du noyau via des fonctions auxiliaires
@@ -103,12 +103,13 @@ Pour comprendre Tetragon, nous devons comprendre eBPF.
 
 ![bg left:33%](./img/canada-1.png)
 
+Pour la surveillance des menaces en temps réel de Tetragon, eBPF attache de petits programmes aux événements du noyau.
+
 **Programme eBPF :** Séquence finie d'instructions de type RISC sur des registres 64 bits, pile de 512 octets
 
 **Point d'attache :** Emplacement du noyau où les programmes eBPF s'attachent :
 - `kprobe`/`kretprobe` : Instrumentation dynamique de fonctions du noyau
 - `tracepoint` : Points de trace statiquement définis
-- `XDP` : Traitement des paquets au niveau du pilote réseau
 - `cgroup-bpf` : Points d'attache des appels système par conteneur
 - `LSM` : Points d'application de la politique de sécurité
 
@@ -129,15 +130,15 @@ Code sûr et efficace s'exécutant dans le noyau.
 
 Les garanties du vérificateur rendent eBPF sûr pour la production :
 
-**Théorème 1 : Terminaison**
+**Terminaison**
 - Pas de boucles infinies—tous les sauts arrière doivent être bornés
 
-**Théorème 2 : Sécurité mémoire**
+**Sécurité mémoire**
 - Ne peut pas accéder à la mémoire du noyau en dehors de la pile, des cartes ou du contexte désignés
 
-**Théorème 3 : Bornitude des ressources**
+**Bornitude des ressources**
 - Bornes supérieures statiquement connues sur le temps d'exécution et la mémoire
-- À l'origine 4096 instructions, maintenant jusqu'à 1 million avec les appels en queue
+- Nombre maximal d'instructions, pile de 512 octets, tailles de cartes fixes
 
 <blockquote>
 Code prouvé sûr dans le noyau.
@@ -152,7 +153,7 @@ Code prouvé sûr dans le noyau.
 
 **Le goulot d'étranglement du mouvement des données :** Déplacer des données entre les composants coûte souvent plus que le calcul lui-même.
 
-**Théorème :** La latence et l'énergie sont minimisées lorsque le calcul se produit **aussi près que possible de l'endroit où les données résident**.
+**Principe :** La latence et l'énergie sont minimisées lorsque le calcul se produit **aussi près que possible de l'endroit où les données résident**.
 
 *Pourquoi cela tient :* Les données traversent des interfaces avec une latence croissante :
 - Caches sur puce → mémoire principale → stockage → réseau

@@ -4,7 +4,7 @@
 
 # Tetragon and eBPF: A Comprehensive Foundation
 
-## From Corporate Requirements to Kernel Internals
+## From Observibility to Kernel Internals
 
 **Date:** 2026-03-23
 **Author:** Bryan Paget, Statistics Canada
@@ -13,7 +13,7 @@
 
 ## Executive Summary
 
-We have been tasked with implementing eBPF-based security solutions to comply with emerging corporate standards. This directive led us to explore Tetragon, an eBPF-powered security observability tool already running experimentally in our Aurora clusters. This document synthesizes our research: what Tetragon is, how it works, the eBPF technology that powers it, and the fundamental systems principles that explain why eBPF is so revolutionary.
+TL;DR on implementing an eBPF-based security solutions to comply with emerging corporate standards. Tetragon is an eBPF-powered security observability tool already running experimentally in Aurora clusters. This document synthesizes what Tetragon is, how it works, the eBPF technology that powers it, and the fundamental systems principles that explain why eBPF is so revolutionary.
 
 ---
 
@@ -32,7 +32,7 @@ We have been tasked with implementing eBPF-based security solutions to comply wi
 
 ## 1.0 Tetragon: The Solution
 
-**Definition 1.1 (Tetragon).** Tetragon is a Kubernetes-aware security observability and runtime enforcement tool that leverages eBPF to provide deep visibility into process, file, and network activity at the Linux kernel level. It enables real-time detection of and response to security threats with minimal performance overhead.
+**Tetragon** is a Kubernetes-aware security observability and runtime enforcement tool that leverages eBPF to provide deep visibility into process, file, and network activity at the Linux kernel level. It enables real-time detection of and response to security threats with minimal performance overhead.
 
 Think of Tetragon as a security camera system for your containers—but one that doesn't just watch the doors and windows (network ports). It watches every action each process takes: every file it opens, every command it executes, every network connection it makes. And because it operates in the kernel, it sees these things as they happen, not after they've been reported up through multiple layers of software.
 
@@ -40,17 +40,15 @@ Think of Tetragon as a security camera system for your containers—but one that
 
 The tool addresses several critical needs:
 
-- **Corporate Compliance:** Directly satisfies the requirement for eBPF-based security solutions.
-- **Kernel-Level Visibility:** Provides insights impossible to achieve with userspace-only tools.
+- **Compliance:** Directly satisfies the requirement for eBPF-based security solutions. Why?
+- **Kernel-Level Visibility:** Provides insights impossible to achieve with userspace-only tools. Why?
 - **Kubernetes Native:** Integrates seamlessly with our existing infrastructure through CRDs.
-- **Proven in Aurora:** Already running experimentally in our environment, reducing unknowns.
+- **Proven in Aurora:** Already running experimentally in Aurora, reducing unknowns.
 - **Lightweight:** eBPF's efficiency means minimal performance impact on production workloads.
 
 ### 1.2 Current Status and Path Forward
 
-Tetragon is enabled experimentally in Aurora clusters as of February 2026. It is planned for migration to `cloudnative-platform-charts`, though no timeline exists. This presents an opportunity: we can accelerate adoption by contributing the chart ourselves and validating in Zone DEV.
-
-**Definition 1.2 (Zone DEV).** A safe, non-production Kubernetes environment where we can experiment with new technologies without risking production workloads or data.
+Tetragon is enabled experimentally in Aurora. It is planned for migration to `cloudnative-platform-charts`, though no timeline exists. This presents an opportunity: we can accelerate adoption by contributing the chart ourselves and validating in Zone DEV.
 
 ---
 
@@ -60,91 +58,72 @@ To understand Tetragon, we must understand the technology that makes it possible
 
 ### 2.1 Historical Context: From Packet Filter to Virtual Machine
 
-**Definition 2.1 (Packet Filtering).** Packet filtering is the process of inspecting network packets as they arrive at or leave a network interface and deciding, based on configurable rules, whether to allow, drop, or modify each packet.
+**Packet filtering** inspects network packets as they arrive at or leave a network interface, deciding whether to allow, drop, or modify each packet based on configurable rules.
 
-Packet filtering was the original problem that led to eBPF's predecessor, the classic Berkeley Packet Filter (BPF), developed in 1992. The challenge is fundamental: packets arrive at millions per second. To keep up, filtering must happen inside the kernel, as close to the hardware as possible, without copying packets to userspace. Classic BPF provided a simple, safe virtual machine for exactly this purpose.
+This was the original problem that led to Berkeley Packet Filter (BPF) in 1992. The challenge is fundamental: packets arrive at millions per second. To keep up, filtering must happen inside the kernel, as close to the hardware as possible. Classic BPF provided a simple, safe virtual machine for exactly this purpose.
 
-Over three decades, the utility of running safe programs inside the kernel became apparent for far more than packet filtering. This insight led to the development of extended BPF (eBPF) in 2014.
+Over three decades, the utility of running safe programs inside the kernel became apparent for far more than packet filtering. This led to extended BPF (eBPF) in 2014.
 
-**Definition 2.2 (General-Purpose In-Kernel Virtual Machine).** A general-purpose in-kernel virtual machine is a lightweight execution engine embedded within the operating system kernel that can safely run user-supplied programs. It provides:
+**eBPF** is a general-purpose in-kernel virtual machine that safely runs user-supplied programs. It provides:
 - A well-defined instruction set
 - A verifier guaranteeing program safety
 - Access to kernel data via helper functions
 - Efficient communication with userspace
 - Attachment to diverse kernel events
 
-**Theorem 2.1 (The eBPF Evolution).** eBPF extends classic BPF by generalizing its attach points beyond network sockets to any kernel event (system calls, tracepoints, function entries/exits) while preserving its core safety and efficiency guarantees.
-
 ### 2.2 Core eBPF Concepts
 
-**Definition 2.3 (eBPF Program).** An eBPF program is a finite sequence of instructions in the eBPF instruction set architecture (ISA)—a RISC-like set of arithmetic, load/store, and branch operations operating on 64-bit registers and a 512-byte stack.
+For Tetragon's real-time threat monitoring, eBPF attaches small programs to kernel events. When specific hooks fire—like a process executing or a file opening—the eBPF program runs and captures the event.
 
-**Definition 2.4 (Hook).** A hook is a kernel location (system call entry, tracepoint, network driver, etc.) to which an eBPF program can be attached. When execution reaches that location, the program runs.
+**eBPF Program:** A finite sequence of RISC-like instructions operating on 64-bit registers and a 512-byte stack.
 
-Common hooks include:
+**Hook:** A kernel location where eBPF programs attach. When execution reaches that location, the program runs.
+
+Common hooks Tetragon uses:
 - `kprobe`/`kretprobe`: Dynamic instrumentation of any kernel function
 - `tracepoint`: Statically defined kernel trace points
-- `XDP` (eXpress Data Path): Network driver level, earliest possible packet processing
 - `cgroup-bpf`: Per-container system call and network operation hooks
-- `LSM` (Linux Security Module): Security policy enforcement points
+- `LSM`: Security policy enforcement points
 
-**Definition 2.5 (eBPF Map).** An eBPF map is a kernel-resident data structure (hash table, array, ring buffer, etc.) enabling communication between eBPF programs and userspace, or among eBPF programs themselves.
+**eBPF Map:** A kernel-resident data structure (hash table, array, ring buffer) enabling communication between eBPF programs and userspace.
 
-**Definition 2.6 (Verifier).** The eBPF verifier is a static analysis subsystem that checks every eBPF program before execution, ensuring safety constraints are met.
+**Verifier:** A static analysis subsystem that checks every eBPF program before execution, ensuring safety constraints are met.
 
-**Definition 2.7 (Helper Function).** A helper function is a kernel function that eBPF programs may call to perform operations like map lookups, random number generation, or event output.
+**Helper Function:** A kernel function that eBPF programs may call to perform operations like map lookups, random number generation, or event output.
 
 ### 2.3 The Safety Theorems
 
-The verifier's guarantees are what make eBPF safe enough to run in production kernels. Let's state them formally:
+The verifier's guarantees are what make eBPF safe enough to run in production kernels:
 
-**Theorem 2.2 (Termination).** Every valid eBPF program is guaranteed to terminate.
+**Termination:** Every valid eBPF program is guaranteed to terminate. The verifier analyzes the control-flow graph and rejects any program containing unbounded loops. This prevents infinite loops in the kernel.
 
-*Proof sketch.* The verifier analyzes the program's control-flow graph and rejects any program containing a loop not provably bounded. All backward jumps must have deterministic upper bounds.
+**Memory Safety:** eBPF programs cannot access kernel memory outside their designated stack, map memory, or context. The verifier tracks every memory access, preventing corruption of kernel data structures.
 
-This means no eBPF program accepted by the verifier can contain an infinite loop—a critical safety property when running code in the kernel.
-
-**Theorem 2.3 (Memory Safety).** A valid eBPF program cannot access kernel memory outside its designated stack, map memory, or context.
-
-*Proof sketch.* The verifier tracks the type and bounds of every memory access, ensuring stack pointers stay within the program's stack space, map accesses remain within map boundaries, and context pointers are not dereferenced out of bounds.
-
-So eBPF programs cannot directly modify arbitrary kernel memory; they can only manipulate maps, stack, and context. This prevents them from corrupting kernel data structures.
-
-**Theorem 2.4 (Resource Boundedness).** Every eBPF program has a statically known upper bound on execution time and memory usage.
-
-*Proof sketch.* Maximum instruction count (originally 4096, now up to 1 million with tail calls) is checked. Stack size is fixed at 512 bytes. Map sizes are specified at creation. Helper functions have bounded execution time.
-
-Because resource usage is bounded, eBPF programs introduce predictable, low overhead even when attached to high-frequency hooks. This is essential for production use.
+**Resource Boundedness:** Every eBPF program has statically known upper bounds on execution time and memory usage. Maximum instruction count, stack size (512 bytes), and map sizes are all checked. This ensures predictable, low overhead even on high-frequency hooks.
 
 ---
 
 ## 3.0 The Principle of Proximity
 
-Modern computing systems face a fundamental challenge: moving data between components (CPU, memory, storage, network) often takes more time and energy than the actual computation. This is known as the data movement bottleneck.
+Modern computing systems face a fundamental challenge: moving data between components (CPU, memory, storage, network) often takes more time and energy than the actual computation. This is the **data movement bottleneck**.
 
-**Definition 3.1 (The Data Movement Bottleneck).** The performance limitation where the time and energy spent transferring data between components dominates the time and energy spent on computation.
+**Principle of Proximity:** Latency and energy consumption are minimized when computation is performed as close as possible to where data resides.
 
-**Theorem 3.1 (Principle of Proximity).** For a given computational task, end-to-end latency and energy consumption are minimized, and potential throughput maximized, when computation is performed as close as possible to where data resides.
+Data traverses interfaces with increasing latency: on-chip caches → main memory → storage → network. Co-locating computation with data reduces or eliminates these movement steps.
 
-*Why this holds.* Data traverses interfaces with increasing latency and decreasing bandwidth as it moves away from the processor: on-chip caches → main memory → storage → network. Each step adds overhead. Co-locating computation with data reduces or eliminates these movement steps.
-
-This principle manifests in multiple areas of system design.
+This principle appears across system design:
 
 ### 3.1 Unified Memory Architecture
 
-**Definition 3.1.1 (Unified Memory Architecture).** A design where CPU, GPU, and other processors share a single, physically uniform pool of memory, achieved by integrating memory controllers and processors onto a system-on-chip (SoC) with direct memory connections.
-
-Both Apple's M-series chips and AMD's latest "Strix Halo" processors implement this approach. By placing memory on the same package with a wide bus (512-bit in Apple's case), they achieve 500+ GB/s of bandwidth—far exceeding traditional architectures. This eliminates copying data between separate CPU and GPU memory pools.
+**Unified Memory Architecture** places CPU, GPU, and other processors on a single system-on-chip (SoC) sharing one memory pool. Apple's M-series and AMD's "Strix Halo" processors use this approach, achieving 500+ GB/s bandwidth by eliminating data copies between separate memory pools.
 
 ### 3.2 Zero-Copy and Kernel Bypass
 
-**Definition 3.2.1 (Zero-Copy).** Techniques that eliminate redundant copies of data as it moves between system components (e.g., between kernel space and user space).
+**Zero-copy** techniques eliminate redundant data copies between system components. **Kernel bypass** allows user-space applications direct, safe access to hardware without kernel involvement in the critical path.
 
-**Definition 3.2.2 (Kernel Bypass).** Techniques allowing user-space applications direct, safe access to hardware resources without kernel involvement in the critical data path.
+eBPF's XDP (eXpress Data Path) exemplifies this: it processes packets at the network driver level, before the kernel network stack, avoiding copies and achieving line-rate packet handling.
 
-eBPF's XDP (eXpress Data Path) exemplifies this: it processes packets at the network driver level, before the kernel network stack, avoiding copies and achieving line-rate packet handling. Computation occurs where data first enters the system.
-
-**Relevance to Tetragon.** Tetragon embodies this principle by running security monitoring programs *inside the kernel* via eBPF. Instead of copying system events to user space for analysis, it processes them at their source—the kernel hooks where they occur. This minimizes latency and provides real-time visibility impossible with traditional audit approaches.
+**Relevance to Tetragon:** Tetragon embodies this principle by running security monitoring programs *inside the kernel* via eBPF. Instead of copying system events to user space for analysis, it processes them at their source—the kernel hooks where they occur. This minimizes latency and provides real-time visibility impossible with traditional audit approaches.
 
 ---
 
@@ -154,9 +133,9 @@ With the foundation established, we can now understand precisely how Tetragon us
 
 ### 4.1 Key Tetragon Components
 
-**Definition 4.1 (TracingPolicy).** A Kubernetes Custom Resource Definition (CRD) that defines what events Tetragon should trace and how to react. Policies specify hooks (e.g., `execve` system calls), match conditions (e.g., specific binaries), and actions (e.g., generate event, terminate process).
+**TracingPolicy:** A Kubernetes Custom Resource Definition (CRD) that defines what events Tetragon should trace and how to react. Policies specify hooks (e.g., `execve` system calls), match conditions (e.g., specific binaries), and actions (e.g., generate event, terminate process).
 
-**Definition 4.2 (Tetragon Agent).** A DaemonSet running on each node that loads eBPF programs based on TracingPolicies, collects events from eBPF maps, and exports them to configured sinks (stdout, ELK, etc.).
+**Tetragon Agent:** A DaemonSet running on each node that loads eBPF programs based on TracingPolicies, collects events from eBPF maps, and exports them to configured sinks (stdout, ELK, etc.).
 
 ### 4.2 How Tetragon Uses eBPF Hooks
 
@@ -336,7 +315,7 @@ L'outil répond à plusieurs besoins critiques :
 
 Tetragon est activé de manière expérimentale dans les grappes Aurora depuis février 2026. Sa migration vers `cloudnative-platform-charts` est prévue, bien qu'aucun calendrier n'existe. Cela présente une opportunité : nous pouvons accélérer l'adoption en contribuant nous-mêmes le chart et en validant dans DEV de la Zone.
 
-**Définition 1.2 (DEV de la Zone).** Un environnement Kubernetes sûr, hors production, où nous pouvons expérimenter de nouvelles technologies sans risquer les charges de travail ou les données de production.
+**DEV de la Zone :** Un environnement Kubernetes sûr, hors production, où nous pouvons expérimenter de nouvelles technologies sans risquer les charges de travail ou les données de production.
 
 ---
 
@@ -346,91 +325,72 @@ Pour comprendre Tetragon, nous devons comprendre la technologie qui le rend poss
 
 ### 2.1 Contexte historique : Du filtre de paquets à la machine virtuelle
 
-**Définition 2.1 (Filtrage de paquets).** Le filtrage de paquets est le processus d'inspection des paquets réseau à leur arrivée ou départ d'une interface réseau et de décision, basée sur des règles configurables, d'autoriser, rejeter ou modifier chaque paquet.
+Le **filtrage de paquets** inspecte les paquets réseau à leur arrivée ou départ d'une interface réseau, décidant d'autoriser, rejeter ou modifier chaque paquet selon des règles configurables.
 
-Le filtrage de paquets était le problème initial qui a conduit au prédécesseur d'eBPF, le Berkeley Packet Filter (BPF) classique, développé en 1992. Le défi est fondamental : les paquets arrivent par millions par seconde. Pour suivre, le filtrage doit se faire dans le noyau, aussi près que possible du matériel, sans copier les paquets vers l'espace utilisateur. Le BPF classique fournissait une machine virtuelle simple et sûre exactement dans ce but.
+C'était le problème initial qui a conduit au Berkeley Packet Filter (BPF) en 1992. Le défi est fondamental : les paquets arrivent par millions par seconde. Pour suivre, le filtrage doit se faire dans le noyau, aussi près que possible du matériel. Le BPF classique fournissait une machine virtuelle simple et sûre exactement dans ce but.
 
-Au cours de trois décennies, l'utilité d'exécuter des programmes sûrs à l'intérieur du noyau est devenue apparente pour bien plus que le filtrage de paquets. Cette intuition a conduit au développement du BPF étendu (eBPF) en 2014.
+Au cours de trois décennies, l'utilité d'exécuter des programmes sûrs à l'intérieur du noyau est devenue apparente pour bien plus que le filtrage de paquets. Cela a conduit au BPF étendu (eBPF) en 2014.
 
-**Définition 2.2 (Machine virtuelle dans le noyau à usage général).** Une machine virtuelle dans le noyau à usage général est un moteur d'exécution léger intégré au noyau du système d'exploitation qui peut exécuter en toute sécurité des programmes fournis par l'utilisateur. Il fournit :
+**eBPF** est une machine virtuelle dans le noyau à usage général qui exécute en toute sécurité des programmes fournis par l'utilisateur. Il fournit :
 - Un jeu d'instructions bien défini
 - Un vérificateur garantissant la sécurité des programmes
 - Un accès aux données du noyau via des fonctions auxiliaires
 - Une communication efficace avec l'espace utilisateur
 - Une attache à divers événements du noyau
 
-**Théorème 2.1 (L'évolution eBPF).** eBPF étend le BPF classique en généralisant ses points d'attache au-delà des sockets réseau vers tout événement du noyau (appels système, points de trace, entrées/sorties de fonctions) tout en préservant ses garanties fondamentales de sécurité et d'efficacité.
-
 ### 2.2 Concepts de base d'eBPF
 
-**Définition 2.3 (Programme eBPF).** Un programme eBPF est une séquence finie d'instructions dans le jeu d'instructions eBPF (ISA)—un ensemble de type RISC d'opérations arithmétiques, de chargement/stockage et de branchement opérant sur des registres 64 bits et une pile de 512 octets.
+Pour la surveillance des menaces en temps réel de Tetragon, eBPF attache de petits programmes aux événements du noyau. Lorsque des hooks spécifiques se déclenchent—comme un processus qui s'exécute ou un fichier qui s'ouvre—le programme eBPF s'exécute et capture l'événement.
 
-**Définition 2.4 (Point d'attache).** Un point d'attache est un emplacement du noyau (entrée d'appel système, point de trace, pilote réseau, etc.) auquel un programme eBPF peut être attaché. Lorsque l'exécution atteint cet emplacement, le programme s'exécute.
+**Programme eBPF :** Une séquence finie d'instructions de type RISC opérant sur des registres 64 bits et une pile de 512 octets.
 
-Les points d'attache courants incluent :
+**Point d'attache :** Un emplacement du noyau où les programmes eBPF s'attachent. Lorsque l'exécution atteint cet emplacement, le programme s'exécute.
+
+Les points d'attache courants que Tetragon utilise :
 - `kprobe`/`kretprobe` : Instrumentation dynamique de toute fonction du noyau
 - `tracepoint` : Points de trace du noyau statiquement définis
-- `XDP` (eXpress Data Path) : Niveau du pilote réseau, traitement des paquets le plus précoce possible
 - `cgroup-bpf` : Points d'attache des appels système et opérations réseau par conteneur
-- `LSM` (Linux Security Module) : Points d'application de la politique de sécurité
+- `LSM` : Points d'application de la politique de sécurité
 
-**Définition 2.5 (Carte eBPF).** Une carte eBPF est une structure de données résidente dans le noyau (table de hachage, tableau, tampon en anneau, etc.) permettant la communication entre les programmes eBPF et l'espace utilisateur, ou entre les programmes eBPF eux-mêmes.
+**Carte eBPF :** Une structure de données résidente dans le noyau (table de hachage, tableau, tampon en anneau) permettant la communication entre les programmes eBPF et l'espace utilisateur.
 
-**Définition 2.6 (Vérificateur).** Le vérificateur eBPF est un sous-système d'analyse statique qui vérifie chaque programme eBPF avant l'exécution, garantissant que les contraintes de sécurité sont respectées.
+**Vérificateur :** Un sous-système d'analyse statique qui vérifie chaque programme eBPF avant l'exécution, garantissant que les contraintes de sécurité sont respectées.
 
-**Définition 2.7 (Fonction auxiliaire).** Une fonction auxiliaire est une fonction du noyau que les programmes eBPF peuvent appeler pour effectuer des opérations comme des recherches dans les cartes, la génération de nombres aléatoires ou la sortie d'événements.
+**Fonction auxiliaire :** Une fonction du noyau que les programmes eBPF peuvent appeler pour effectuer des opérations comme des recherches dans les cartes, la génération de nombres aléatoires ou la sortie d'événements.
 
 ### 2.3 Les théorèmes de sécurité
 
-Les garanties du vérificateur sont ce qui rend eBPF suffisamment sûr pour s'exécuter dans des noyaux de production. Énonçons-les formellement :
+Les garanties du vérificateur rendent eBPF suffisamment sûr pour s'exécuter dans des noyaux de production :
 
-**Théorème 2.2 (Terminaison).** Tout programme eBPF valide est garanti de se terminer.
+**Terminaison :** Tout programme eBPF valide est garanti de se terminer. Le vérificateur analyse le graphe de flot de contrôle et rejette tout programme contenant des boucles non bornées. Cela prévient les boucles infinies dans le noyau.
 
-*Esquisse de preuve.* Le vérificateur analyse le graphe de flot de contrôle du programme et rejette tout programme contenant une boucle non prouvablement bornée. Tous les sauts arrière doivent avoir des bornes supérieures déterministes.
+**Sécurité mémoire :** Les programmes eBPF ne peuvent pas accéder à la mémoire du noyau en dehors de leur pile désignée, de la mémoire des cartes, ou de leur contexte. Le vérificateur suit chaque accès mémoire, prévenant la corruption des structures de données du noyau.
 
-Cela signifie qu'aucun programme eBPF accepté par le vérificateur ne peut contenir de boucle infinie—une propriété de sécurité critique lors de l'exécution de code dans le noyau.
-
-**Théorème 2.3 (Sécurité mémoire).** Un programme eBPF valide ne peut pas accéder à la mémoire du noyau en dehors de sa pile désignée, de la mémoire des cartes, ou de son contexte.
-
-*Esquisse de preuve.* Le vérificateur suit le type et les bornes de chaque accès mémoire, garantissant que les pointeurs de pile restent dans l'espace de pile du programme, que les accès aux cartes restent dans les limites des cartes, et que les pointeurs de contexte ne sont pas déréférencés hors limites.
-
-Ainsi, les programmes eBPF ne peuvent pas directement modifier la mémoire arbitraire du noyau ; ils ne peuvent manipuler que les cartes, la pile et le contexte. Cela les empêche de corrompre les structures de données du noyau.
-
-**Théorème 2.4 (Bornitude des ressources).** Tout programme eBPF a une borne supérieure statiquement connue sur le temps d'exécution et l'utilisation de la mémoire.
-
-*Esquisse de preuve.* Le nombre maximal d'instructions (à l'origine 4096, maintenant jusqu'à 1 million avec les appels en queue) est vérifié. La taille de la pile est fixée à 512 octets. Les tailles des cartes sont spécifiées à la création. Les fonctions auxiliaires ont un temps d'exécution borné.
-
-Parce que l'utilisation des ressources est bornée, les programmes eBPF introduisent une surcharge faible et prévisible même lorsqu'ils sont attachés à des points d'attache à haute fréquence. Ceci est essentiel pour une utilisation en production.
+**Bornitude des ressources :** Tout programme eBPF a des bornes supérieures statiquement connues sur le temps d'exécution et l'utilisation de la mémoire. Le nombre maximal d'instructions, la taille de la pile (512 octets), et les tailles des cartes sont tous vérifiés. Cela assure une surcharge faible et prévisible même sur des hooks à haute fréquence.
 
 ---
 
 ## 3.0 Le principe de proximité
 
-Les systèmes informatiques modernes font face à un défi fondamental : déplacer des données entre les composants (CPU, mémoire, stockage, réseau) prend souvent plus de temps et d'énergie que le calcul réel. C'est ce qu'on appelle le goulot d'étranglement du mouvement des données.
+Les systèmes informatiques modernes font face à un défi fondamental : déplacer des données entre les composants (CPU, mémoire, stockage, réseau) prend souvent plus de temps et d'énergie que le calcul réel. C'est le **goulot d'étranglement du mouvement des données**.
 
-**Définition 3.1 (Le goulot d'étranglement du mouvement des données).** La limitation de performance où le temps et l'énergie dépensés à transférer des données entre les composants dominent le temps et l'énergie dépensés pour le calcul.
+**Principe de proximité :** La latence et la consommation d'énergie sont minimisées lorsque le calcul est effectué aussi près que possible de l'endroit où les données résident.
 
-**Théorème 3.1 (Principe de proximité).** Pour une tâche de calcul donnée, la latence de bout en bout et la consommation d'énergie sont minimisées, et le débit potentiel maximisé, lorsque le calcul est effectué aussi près que possible de l'endroit où les données résident.
+Les données traversent des interfaces avec une latence croissante : caches sur puce → mémoire principale → stockage → réseau. Co-localiser le calcul avec les données réduit ou élimine ces étapes de mouvement.
 
-*Pourquoi cela tient.* Les données traversent des interfaces avec une latence croissante et une bande passante décroissante à mesure qu'elles s'éloignent du processeur : caches sur puce → mémoire principale → stockage → réseau. Chaque étape ajoute une surcharge. Co-localiser le calcul avec les données réduit ou élimine ces étapes de mouvement.
-
-Ce principe se manifeste dans plusieurs domaines de la conception des systèmes.
+Ce principe apparaît dans plusieurs domaines de la conception des systèmes :
 
 ### 3.1 Architecture mémoire unifiée
 
-**Définition 3.1.1 (Architecture mémoire unifiée).** Une conception où le CPU, le GPU et d'autres processeurs partagent un seul pool de mémoire physiquement uniforme, réalisé en intégrant les contrôleurs mémoire et les processeurs sur un système-sur-puce (SoC) avec des connexions mémoire directes.
-
-Les puces M d'Apple et les derniers processeurs "Strix Halo" d'AMD implémentent cette approche. En plaçant la mémoire sur le même boîtier avec un bus large (512 bits dans le cas d'Apple), ils atteignent plus de 500 Go/s de bande passante—dépassant de loin les architectures traditionnelles. Cela élimine la copie de données entre les pools de mémoire CPU et GPU séparés.
+**Architecture mémoire unifiée** place le CPU, le GPU et d'autres processeurs sur un seul système-sur-puce (SoC) partageant un pool de mémoire unique. Les processeurs M-series d'Apple et "Strix Halo" d'AMD utilisent cette approche, atteignant plus de 500 Go/s de bande passante en éliminant les copies de données entre les pools de mémoire séparés.
 
 ### 3.2 Zéro copie et contournement du noyau
 
-**Définition 3.2.1 (Zéro copie).** Techniques qui éliminent les copies redondantes de données lors de leur déplacement entre les composants du système (par exemple, entre l'espace noyau et l'espace utilisateur).
+Les techniques **zéro copie** éliminent les copies redondantes de données entre les composants du système. Le **contournement du noyau** permet aux applications utilisateur un accès direct et sûr aux ressources matérielles sans implication du noyau dans le chemin critique.
 
-**Définition 3.2.2 (Contournement du noyau).** Techniques permettant aux applications utilisateur un accès direct et sûr aux ressources matérielles sans implication du noyau dans le chemin de données critique.
+Le XDP (eXpress Data Path) d'eBPF en est l'exemple : il traite les paquets au niveau du pilote réseau, avant la pile réseau du noyau, évitant les copies et atteignant un traitement des paquets à débit linéaire.
 
-Le XDP (eXpress Data Path) d'eBPF en est l'exemple : il traite les paquets au niveau du pilote réseau, avant la pile réseau du noyau, évitant les copies et atteignant un traitement des paquets à débit linéaire. Le calcul se produit là où les données entrent d'abord dans le système.
-
-**Pertinence pour Tetragon.** Tetragon incarne ce principe en exécutant des programmes de surveillance de sécurité *à l'intérieur du noyau* via eBPF. Au lieu de copier les événements système vers l'espace utilisateur pour analyse, il les traite à leur source—les points d'attache du noyau où ils se produisent. Cela minimise la latence et fournit une visibilité en temps réel impossible avec les approches d'audit traditionnelles.
+**Pertinence pour Tetragon :** Tetragon incarne ce principe en exécutant des programmes de surveillance de sécurité *à l'intérieur du noyau* via eBPF. Au lieu de copier les événements système vers l'espace utilisateur pour analyse, il les traite à leur source—les points d'attache du noyau où ils se produisent. Cela minimise la latence et fournit une visibilité en temps réel impossible avec les approches d'audit traditionnelles.
 
 ---
 
@@ -440,9 +400,9 @@ Avec la base établie, nous pouvons maintenant comprendre précisément comment 
 
 ### 4.1 Composants clés de Tetragon
 
-**Définition 4.1 (TracingPolicy).** Une définition de ressource personnalisée (CRD) Kubernetes qui définit quels événements Tetragon doit tracer et comment réagir. Les politiques spécifient les points d'attache (par exemple, appels système `execve`), les conditions de correspondance (par exemple, binaires spécifiques), et les actions (par exemple, générer un événement, terminer un processus).
+**TracingPolicy :** Une définition de ressource personnalisée (CRD) Kubernetes qui définit quels événements Tetragon doit tracer et comment réagir. Les politiques spécifient les points d'attache (par exemple, appels système `execve`), les conditions de correspondance (par exemple, binaires spécifiques), et les actions (par exemple, générer un événement, terminer un processus).
 
-**Définition 4.2 (Agent Tetragon).** Un DaemonSet s'exécutant sur chaque nœud qui charge des programmes eBPF basés sur des TracingPolicies, collecte les événements des cartes eBPF, et les exporte vers des destinations configurées (stdout, ELK, etc.).
+**Agent Tetragon :** Un DaemonSet s'exécutant sur chaque nœud qui charge des programmes eBPF basés sur des TracingPolicies, collecte les événements des cartes eBPF, et les exporte vers des destinations configurées (stdout, ELK, etc.).
 
 ### 4.2 Comment Tetragon utilise les points d'attache eBPF
 

@@ -86,7 +86,7 @@ To understand Tetragon, we must understand eBPF.
 - **1992:** Berkeley Packet Filter (BPF) for network packet filtering
 - **2014:** Extended BPF (eBPF) generalized beyond networking
 
-**Definition:** A **general-purpose in-kernel virtual machine** that safely runs user-supplied programs with:
+**eBPF:** A general-purpose in-kernel virtual machine that safely runs user-supplied programs with:
 - Well-defined instruction set
 - Verifier guaranteeing safety
 - Access to kernel data via helper functions
@@ -103,12 +103,13 @@ To understand Tetragon, we must understand eBPF.
 
 ![bg left:33%](./img/canada-1.png)
 
+For Tetragon's real-time threat monitoring, eBPF attaches small programs to kernel events.
+
 **eBPF Program:** Finite sequence of RISC-like instructions on 64-bit registers, 512-byte stack
 
 **Hook:** Kernel location where eBPF programs attach:
 - `kprobe`/`kretprobe`: Dynamic kernel function instrumentation
 - `tracepoint`: Statically defined trace points
-- `XDP`: Network driver level packet processing
 - `cgroup-bpf`: Per-container system call hooks
 - `LSM`: Security policy enforcement points
 
@@ -129,15 +130,15 @@ Safe, efficient code running in the kernel.
 
 The verifier guarantees make eBPF safe for production:
 
-**Theorem 1: Termination**
+**Termination**
 - No infinite loops—all backward jumps must be bounded
 
-**Theorem 2: Memory Safety**
+**Memory Safety**
 - Cannot access kernel memory outside designated stack, maps, or context
 
-**Theorem 3: Resource Boundedness**
+**Resource Boundedness**
 - Statically known upper bounds on execution time and memory
-- Originally 4096 instructions, now up to 1 million with tail calls
+- Maximum instruction count, 512-byte stack, fixed map sizes
 
 <blockquote>
 Provably safe code in the kernel.
@@ -152,7 +153,7 @@ Provably safe code in the kernel.
 
 **The Data Movement Bottleneck:** Moving data between components often costs more than computation itself.
 
-**Theorem:** Latency and energy are minimized when computation occurs **as close as possible to where data resides**.
+**Principle:** Latency and energy are minimized when computation occurs **as close as possible to where data resides**.
 
 *Why this holds:* Data traverses interfaces with increasing latency:
 - On-chip caches → main memory → storage → network
