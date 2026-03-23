@@ -1,0 +1,177 @@
+name: Build Marp Presentations
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'content/**'
+      - 'config/**'
+      - 'img/**'
+      - 'Makefile'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'content/**'
+      - 'config/**'
+      - 'img/**'
+      - 'Makefile'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-pdfs:
+    name: Build PDFs
+    runs-on: ubuntu-latest
+    container:
+      image: node:20-bookworm
+      options: --user root
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Marp CLI
+        run: npm install -g @marp-team/marp-cli
+
+      - name: Install Chromium for Marp PDF export
+        run: apt-get update && apt-get install -y chromium --no-install-recommends
+
+      - name: Setup temporary directory
+        run: mkdir -p temp && cp -r img temp/
+
+      - name: Combine header and English content
+        run: cat config/header.md content/slides-en.md > temp/slides-en-combined.md
+
+      - name: Combine header and French content
+        run: cat config/header.md content/slides-fr.md > temp/slides-fr-combined.md
+
+      - name: Build English PDF
+        run: marp temp/slides-en-combined.md --pdf --output tetragon-ebpf-presentation-en.pdf --allow-local-files --pdf-outlines
+
+      - name: Build French PDF
+        run: marp temp/slides-fr-combined.md --pdf --output tetragon-ebpf-presentation-fr.pdf --allow-local-files --pdf-outlines
+
+      - name: Upload English PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tetragon-ebpf-presentation-en
+          path: tetragon-ebpf-presentation-en.pdf
+          retention-days: 30
+
+      - name: Upload French PDF artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tetragon-ebpf-presentation-fr
+          path: tetragon-ebpf-presentation-fr.pdf
+          retention-days: 30
+
+  deploy-pages:
+    name: Deploy to GitHub Pages
+    needs: build-pdfs
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download English PDF
+        uses: actions/download-artifact@v4
+        with:
+          name: tetragon-ebpf-presentation-en
+
+      - name: Download French PDF
+        uses: actions/download-artifact@v4
+        with:
+          name: tetragon-ebpf-presentation-fr
+
+      - name: Create index page
+        run: |
+          cat > index.html << 'EOF'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+              <meta charset="UTF-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Tetragon and eBPF Presentation</title>
+              <style>
+                  body {
+                      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                      max-width: 800px;
+                      margin: 0 auto;
+                      padding: 2rem;
+                      background: #f5f5f5;
+                  }
+                  .container {
+                      background: white;
+                      padding: 2rem;
+                      border-radius: 8px;
+                      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                  }
+                  h1 {
+                      color: #26374a;
+                  }
+                  .download-links {
+                      margin-top: 2rem;
+                  }
+                  .download-links a {
+                      display: inline-block;
+                      margin: 0.5rem 0.5rem 0.5rem 0;
+                      padding: 0.75rem 1.5rem;
+                      background: #3e6ca7;
+                      color: white;
+                      text-decoration: none;
+                      border-radius: 4px;
+                  }
+                  .download-links a:hover {
+                      background: #26374a;
+                  }
+                  .footer {
+                      margin-top: 2rem;
+                      padding-top: 1rem;
+                      border-top: 1px solid #eee;
+                      color: #666;
+                      font-size: 0.9rem;
+                  }
+              </style>
+          </head>
+          <body>
+              <div class="container">
+                  <h1>Tetragon and eBPF Presentation</h1>
+                  <p>Download the presentation slides in PDF format:</p>
+                  <div class="download-links">
+                      <a href="tetragon-ebpf-presentation-en.pdf">English Version</a>
+                      <a href="tetragon-ebpf-presentation-fr.pdf">Version française</a>
+                  </div>
+                  <div class="footer">
+                      <p>Statistics Canada | Statistique Canada</p>
+                  </div>
+              </div>
+          </body>
+          </html>
+          EOF
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
