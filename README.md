@@ -40,11 +40,11 @@ Think of Tetragon as a security camera system for your containers—but one that
 
 The tool addresses several critical needs:
 
-- **Compliance:** Directly satisfies the requirement for eBPF-based security solutions. Why?
-- **Kernel-Level Visibility:** Provides insights impossible to achieve with userspace-only tools. Why?
-- **Kubernetes Native:** Integrates seamlessly with our existing infrastructure through CRDs.
-- **Proven in Aurora:** Already running experimentally in Aurora, reducing unknowns.
-- **Lightweight:** eBPF's efficiency means minimal performance impact on production workloads.
+- **Compliance:** Directly satisfies the requirement for eBPF-based security solutions
+- **Kernel-Level Visibility:** Provides insights impossible to achieve with userspace-only tools
+- **Kubernetes Native:** Integrates seamlessly with our existing infrastructure through CRDs
+- **Proven in Aurora:** Already running experimentally in Aurora, reducing unknowns
+- **Lightweight:** eBPF's efficiency means minimal performance impact on production workloads
 
 ### 1.2 Current Status and Path Forward
 
@@ -164,8 +164,10 @@ spec:
       type: "string"
     selectors:
     - matchBinaries:
-      - "/bin/bash"
-      - "/bin/sh"
+      - operator: "In"
+        values:
+        - "/bin/bash"
+        - "/bin/sh"
       matchArgs:
       - index: 0
         operator: "Contains"
@@ -201,9 +203,7 @@ kubectl create namespace tetragon
 
 # Install with minimal configuration
 helm upgrade --install tetragon cilium/tetragon \
-  --namespace tetragon \
-  --set tetragonOperator.enabled=true \
-  --set tetragon.enabled=true
+  --namespace tetragon
 ```
 
 ### 5.3 Verification
@@ -297,7 +297,7 @@ Nous avons reçu le mandat de mettre en œuvre des solutions de sécurité basé
 
 ## 1.0 Tetragon : La solution
 
-**Définition 1.1 (Tetragon).** Tetragon est un outil d'observabilité de sécurité et d'application de règles en temps d'exécution, conscient de Kubernetes, qui utilise eBPF pour fournir une visibilité approfondie sur l'activité des processus, des fichiers et du réseau au niveau du noyau Linux. Il permet la détection en temps réel et la réponse aux menaces de sécurité avec un impact minimal sur les performances.
+**Tetragon** est un outil d'observabilité de sécurité et d'application de règles en temps d'exécution, conscient de Kubernetes, qui utilise eBPF pour fournir une visibilité approfondie sur l'activité des processus, des fichiers et du réseau au niveau du noyau Linux. Il permet la détection en temps réel et la réponse aux menaces de sécurité avec un impact minimal sur les performances.
 
 Considérez Tetragon comme un système de caméras de sécurité pour vos conteneurs—mais qui ne surveille pas seulement les portes et fenêtres (ports réseau). Il surveille chaque action de chaque processus : chaque fichier qu'il ouvre, chaque commande qu'il exécute, chaque connexion réseau qu'il établit. Et parce qu'il opère dans le noyau, il voit ces choses au moment où elles se produisent, pas après qu'elles ont été signalées à travers plusieurs couches de logiciels.
 
@@ -305,11 +305,11 @@ Considérez Tetragon comme un système de caméras de sécurité pour vos conten
 
 L'outil répond à plusieurs besoins critiques :
 
-- **Conformité organisationnelle :** Satisfait directement l'exigence de solutions de sécurité basées sur eBPF.
-- **Visibilité au niveau du noyau :** Fournit des aperçus impossibles à obtenir avec des outils uniquement dans l'espace utilisateur.
-- **Natif Kubernetes :** S'intègre parfaitement à notre infrastructure existante via des CRD.
-**Éprouvé dans Aurora :** Déjà en cours d'exécution expérimentale dans notre environnement, réduisant les inconnues.
-- **Léger :** L'efficacité d'eBPF signifie un impact minimal sur les performances des charges de travail en production.
+- **Conformité organisationnelle :** Satisfait directement l'exigence de solutions de sécurité basées sur eBPF
+- **Visibilité au niveau du noyau :** Fournit des aperçus impossibles à obtenir avec des outils uniquement dans l'espace utilisateur
+- **Natif Kubernetes :** S'intègre parfaitement à notre infrastructure existante via des CRD
+- **Éprouvé dans Aurora :** Déjà en cours d'exécution expérimentale dans notre environnement, réduisant les inconnues
+- **Léger :** L'efficacité d'eBPF signifie un impact minimal sur les performances des charges de travail en production
 
 ### 1.2 État actuel et voie à suivre
 
@@ -431,8 +431,10 @@ spec:
       type: "string"
     selectors:
     - matchBinaries:
-      - "/bin/bash"
-      - "/bin/sh"
+      - operator: "In"
+        values:
+        - "/bin/bash"
+        - "/bin/sh"
       matchArgs:
       - index: 0
         operator: "Contains"
@@ -468,9 +470,7 @@ kubectl create namespace tetragon
 
 # Installer avec configuration minimale
 helm upgrade --install tetragon cilium/tetragon \
-  --namespace tetragon \
-  --set tetragonOperator.enabled=true \
-  --set tetragon.enabled=true
+  --namespace tetragon
 ```
 
 ### 5.3 Vérification
