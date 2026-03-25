@@ -2,8 +2,8 @@
 marp: true
 size: 16:9
 paginate: true
-footer: "Statistics Canada | Statistique Canada"
-header: "March 23, 2026"
+footer: "2026-03-23 | Statistics Canada | Statistique Canada"
+header: ""
 theme: default
 style: |
   /* Statistics Canada Marp Theme */
@@ -24,19 +24,19 @@ style: |
       --background-color: #fff;
 
       /* Font variables */
-      --main-font: "Inter", sans-serif;
-      --code-font: "Fira Code", "Consolas", monospace;
+      --main-font: sans-serif;
+      --code-font: monospace;
 
       /* Size variables */
-      --base-font-size: 16px;
-      --h1-size: 1.7em;
+      --base-font-size: 12px;
+      --h1-size: 1.6em;
       --h2-size: 1.4em;
       --h3-size: 1.2em;
-      --p-size: 0.8em;
-      --code-size: 0.8em;
+      --p-size: 1em;
+      --code-size: 0.7em;
 
       /* Spacing variables */
-      --section-padding: 0.5rem;
+      --section-padding: 0.1rem;
       --element-margin: 0.6rem;
   }
 
@@ -50,13 +50,12 @@ style: |
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      padding-top: 4rem;
+      padding-top: 2rem;
   }
 
   /* Header styles */
   h1 {
       font-size: var(--h1-size);
-      color: var(--primary-color);
       font-weight: 600;
       margin-bottom: var(--element-margin);
       margin-top: 0;
@@ -83,7 +82,6 @@ style: |
   /* Paragraph styles */
   p {
       font-size: var(--p-size);
-      color: var(--text-color);
       line-height: 1.2;
       margin-bottom: var(--element-margin);
   }
@@ -91,18 +89,26 @@ style: |
   /* Code block styles */
   pre>code {
       font-family: var(--code-font);
-      font-size: var(--code-size);
-      background-color: var(--light-gray);
-      padding: 1rem;
+      font-size: 0.6em;
+      background-color: #1e1e1e;
+      color: #d4d4d4;
+      padding: 0.5rem;
       border-radius: 4px;
-      line-height: 1.4;
+      line-height: 1.3;
+      display: block;
+      overflow-x: auto;
+  }
+
+  /* Force syntax highlighting colors to be visible */
+  pre>code .token {
+      color: inherit;
   }
 
   /* Blockquote styles */
   blockquote {
       border-left: 4px solid var(--secondary-color);
       margin-bottom: 1.1rem;
-      font-size: 0.7rem;
+      font-size: 0.8rem;
       line-height: 1.5;
       margin-left: 0;
       color: var(--dark-gray);
@@ -131,7 +137,7 @@ style: |
 
   /* Background image adjustments */
   img[bg] {
-      opacity: 0.15;
+      opacity: 0.2;
   }
 
   /* Link styling */
