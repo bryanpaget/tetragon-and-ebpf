@@ -148,21 +148,57 @@ Le vérificateur eBPF effectue une analyse statique exhaustive :
   columns: (1fr, 1fr, 1fr),
   inset: 6pt,
   [Exigence], [Minimum], [Recommandé],
-  [Noyau Linux], [4.19], [5.4+],
+  [Noyau Linux], [4.19], [5.8+ pour fonctionnalités eBPF],
   [Kubernetes], [1.20], [1.25+],
   [Mémoire nœud], [2 Go], [4 Go+],
   [CPU nœud], [1 cœur], [2+ cœurs],
+  [Helm], [3.x], [Dernier 3.x],
 )
 
-== Installation
+== Installation avec Helm
+
+La méthode la plus simple est d'utiliser Helm. Ceci déploie Tetragon comme un DaemonSet, assurant que l'agent de sécurité s'exécute sur chaque nœud.
+
+=== Étape 1 : Ajouter le dépôt Helm Cilium
 
 ```bash
 helm repo add cilium https://helm.cilium.io
 helm repo update
-kubectl create namespace tetragon
-helm install tetragon cilium/tetragon -n tetragon
-kubectl -n tetragon get pods
 ```
+
+=== Étape 2 : Déployer Tetragon
+
+Installer dans le namespace `kube-system` avec l'API gRPC activée pour l'CLI `tetra` :
+
+```bash
+helm install tetragon cilium/tetragon \
+  --namespace kube-system \
+  --create-namespace \
+  --set tetragon.grpc.enabled=true
+```
+
+=== Étape 3 : Vérifier l'installation
+
+Attendre le déploiement et confirmer que les pods sont en cours d'exécution :
+
+```bash
+kubectl rollout status -n kube-system ds/tetragon -w
+kubectl get pods -n kube-system -l app.kubernetes.io/name=tetragon
+```
+
+== Interagir avec Tetragon
+
+Une fois installé, utilisez l'CLI `tetra` pour voir les événements de sécurité en temps réel :
+
+```bash
+# Port-forward vers un pod Tetragon
+kubectl port-forward -n kube-system ds/tetragon 54321:54321
+
+# Voir les événements en format compact
+tetra getevents -o compact
+```
+
+Pour des configurations avancées, appliquez des TracingPolicies (Custom Resource Definitions) pour surveiller des namespaces spécifiques ou appliquer des politiques.
 
 == Considérations Azure AKS
 
@@ -280,10 +316,14 @@ Procéder avec le plan en trois phases : validation immédiate dans DEV, contrib
 = Références
 
 #list(
-  [Cilium. *Documentation Tetragon.* https://tetragon.cilium.io/docs/],
+  [Cilium. *Documentation Tetragon.* https://tetragon.io/docs/],
+  [Cilium. *Guide d'installation Tetragon.* https://tetragon.io/docs/installation/kubernetes/],
   [Fondation eBPF. *Qu'est-ce que eBPF?* https://ebpf.io/],
   [Rice, L. (2020). *Learning eBPF.* O'Reilly Media.],
   [Documentation du noyau Linux. *Sous-système eBPF.* https://www.kernel.org/doc/html/latest/bpf/],
   [MITRE. *Cadre ATT&CK.* https://attack.mitre.org/],
   [Équipe Aurora SSC. *Charts de la plateforme Aurora.* https://github.com/gccloudone-aurora/aurora-platform-charts],
+  [Lakshman, S. *Securing Kubernetes: Integrating AKS with Tetragon.* Medium.],
+  [Stream Security. *How to Deploy Tetragon on an EKS Cluster.*],
+  [Oracle. *Tetragon eBPF Observability on OKE.* https://docs.oracle.com/en/learn/tetragon-ebpf-observability-oke/],
 )
