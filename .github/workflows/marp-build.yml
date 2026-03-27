@@ -22,7 +22,7 @@ jobs:
         run: npm install -g @marp-team/marp-cli
 
       - name: Install Chromium for Marp PDF export
-        run: apt-get update && apt-get install -y chromium --no-install-recommends
+        run: sudo apt-get update && sudo apt-get install -y chromium --no-install-recommends
 
       - name: Install Typst
         run: |
