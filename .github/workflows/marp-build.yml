@@ -1,4 +1,4 @@
-name: Build Marp Presentations
+name: Build Marp Presentations and Typst Reports
 
 on:
   push:
@@ -13,9 +13,6 @@ jobs:
   build-pdfs:
     name: Build PDFs
     runs-on: ubuntu-latest
-    container:
-      image: node:20-bookworm
-      options: --user root
 
     steps:
       - name: Checkout repository
@@ -27,6 +24,13 @@ jobs:
       - name: Install Chromium for Marp PDF export
         run: apt-get update && apt-get install -y chromium --no-install-recommends
 
+      - name: Install Typst
+        run: |
+          wget https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz
+          tar -xf typst-x86_64-unknown-linux-musl.tar.xz
+          mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
+          chmod +x /usr/local/bin/typst
+
       - name: Setup temporary directory
         run: mkdir -p temp && cp -r img temp/
 
@@ -36,11 +40,17 @@ jobs:
       - name: Combine header and French content
         run: cat config/header.md content/slides-fr.md > temp/slides-fr-combined.md
 
-      - name: Build English PDF
+      - name: Build English presentation PDF
         run: marp --allow-local-files --pdf-outlines --pdf --output tetragon-ebpf-presentation-en.pdf temp/slides-en-combined.md
 
-      - name: Build French PDF
+      - name: Build French presentation PDF
         run: marp --allow-local-files --pdf-outlines --pdf --output tetragon-ebpf-presentation-fr.pdf temp/slides-fr-combined.md
+
+      - name: Build English report PDF (Typst)
+        run: typst compile report/report-en.typ tetragon-ebpf-report-en.pdf
+
+      - name: Build French report PDF (Typst)
+        run: typst compile report/report-fr.typ tetragon-ebpf-report-fr.pdf
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -48,5 +58,7 @@ jobs:
           files: |
             tetragon-ebpf-presentation-en.pdf
             tetragon-ebpf-presentation-fr.pdf
+            tetragon-ebpf-report-en.pdf
+            tetragon-ebpf-report-fr.pdf
           generate_release_notes: true
           draft: false

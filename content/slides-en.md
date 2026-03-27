@@ -413,6 +413,7 @@ Production‑ready configuration validated in Aurora.
 ---
 
 <!-- References -->
+<!-- _class: references -->
 ## References
 
 **Tetragon & eBPF:**

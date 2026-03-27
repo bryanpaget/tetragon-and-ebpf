@@ -170,4 +170,28 @@ style: |
       justify-content: center;
       text-align: center;
   }
+
+  /* References slide - smaller text */
+  .references {
+      font-size: 0.85em;
+  }
+
+  .references h2 {
+      font-size: 1.2em;
+      margin-bottom: 0.5rem;
+  }
+
+  .references p,
+  .references li,
+  .references a {
+      font-size: 0.85em;
+      line-height: 1.4;
+  }
+
+  .references strong {
+      font-size: 0.9em;
+      display: block;
+      margin-top: 0.8rem;
+      margin-bottom: 0.3rem;
+  }
 ---

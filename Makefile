@@ -1,4 +1,4 @@
-# Makefile for generating Marp PDF presentations
+# Makefile for generating Marp PDF presentations and Typst reports
 
 # Variables
 HEADER_MD = config/header.md
@@ -16,28 +16,56 @@ INPUT_MD_FR = content/slides-fr.md
 COMBINED_MD_FR = $(TEMP_DIR)/slides-fr-combined.md
 OUTPUT_PDF_FR = tetragon-ebpf-presentation-fr.pdf
 
-# Default target
-all: pdf
+# English report (Typst)
+REPORT_TYP_EN = report/report-en.typ
+REPORT_OUTPUT_EN = tetragon-ebpf-report-en.pdf
 
-# Create both PDFs
+# French report (Typst)
+REPORT_TYP_FR = report/report-fr.typ
+REPORT_OUTPUT_FR = tetragon-ebpf-report-fr.pdf
+
+# Default target
+all: pdf reports
+
+# Create both PDFs and reports
 pdf: setup combine-en combine-fr
-	@echo "Building English PDF..."
+	@echo "Building English presentation PDF..."
 	marp $(MARP_OPTS) --pdf --output $(OUTPUT_PDF_EN) $(COMBINED_MD_EN)
-	@echo "Building French PDF..."
+	@echo "Building French presentation PDF..."
 	marp $(MARP_OPTS) --pdf --output $(OUTPUT_PDF_FR) $(COMBINED_MD_FR)
-	@echo "PDFs built: $(OUTPUT_PDF_EN), $(OUTPUT_PDF_FR)"
+	@echo "Presentation PDFs built: $(OUTPUT_PDF_EN), $(OUTPUT_PDF_FR)"
+
+# Create both reports using Typst
+reports:
+	@echo "Building English report PDF (Typst)..."
+	typst compile $(REPORT_TYP_EN) $(REPORT_OUTPUT_EN)
+	@echo "Building French report PDF (Typst)..."
+	typst compile $(REPORT_TYP_FR) $(REPORT_OUTPUT_FR)
+	@echo "Report PDFs built: $(REPORT_OUTPUT_EN), $(REPORT_OUTPUT_FR)"
 
 # Build English only
 pdf-en: setup combine-en
-	@echo "Building English PDF..."
+	@echo "Building English presentation PDF..."
 	marp $(MARP_OPTS) --pdf --output $(OUTPUT_PDF_EN) $(COMBINED_MD_EN)
 	@echo "PDF built: $(OUTPUT_PDF_EN)"
 
 # Build French only
 pdf-fr: setup combine-fr
-	@echo "Building French PDF..."
+	@echo "Building French presentation PDF..."
 	marp $(MARP_OPTS) --pdf --output $(OUTPUT_PDF_FR) $(COMBINED_MD_FR)
 	@echo "PDF built: $(OUTPUT_PDF_FR)"
+
+# Build English report only
+report-en:
+	@echo "Building English report PDF (Typst)..."
+	typst compile $(REPORT_TYP_EN) $(REPORT_OUTPUT_EN)
+	@echo "Report built: $(REPORT_OUTPUT_EN)"
+
+# Build French report only
+report-fr:
+	@echo "Building French report PDF (Typst)..."
+	typst compile $(REPORT_TYP_FR) $(REPORT_OUTPUT_FR)
+	@echo "Report built: $(REPORT_OUTPUT_FR)"
 
 # Setup temporary directory and copy assets
 setup:
@@ -60,6 +88,7 @@ clean:
 	@echo "Cleaning up..."
 	rm -rf $(TEMP_DIR)
 	rm -f $(OUTPUT_PDF_EN) $(OUTPUT_PDF_FR)
+	rm -f $(REPORT_OUTPUT_EN) $(REPORT_OUTPUT_FR)
 
 # Install Marp CLI and Chromium
 deps:
@@ -101,16 +130,19 @@ open: pdf
 # Help target
 help:
 	@echo "Available targets:"
-	@echo "  all            - Build both PDFs (default)"
-	@echo "  pdf            - Build both PDFs"
-	@echo "  pdf-en         - Build English PDF only"
-	@echo "  pdf-fr         - Build French PDF only"
+	@echo "  all            - Build both PDFs and reports (default)"
+	@echo "  pdf            - Build both presentation PDFs"
+	@echo "  reports        - Build both report PDFs"
+	@echo "  pdf-en         - Build English presentation PDF only"
+	@echo "  pdf-fr         - Build French presentation PDF only"
+	@echo "  report-en      - Build English report PDF only"
+	@echo "  report-fr      - Build French report PDF only"
 	@echo "  preview-en     - Start live preview server for English (port 8080)"
 	@echo "  preview-fr     - Start live preview server for French (port 8081)"
-	@echo "  open           - Build both PDFs and open them"
+	@echo "  open           - Build PDFs and open them"
 	@echo "  deps           - Install Marp CLI and Chromium"
 	@echo "  install-chromium - Install Chromium only"
 	@echo "  clean          - Remove generated files"
 	@echo "  help           - Show this help message"
 
-.PHONY: all pdf pdf-en pdf-fr setup combine-en combine-fr clean deps install-chromium preview-en preview-fr open help check-marp
+.PHONY: all pdf pdf-en pdf-fr reports report-en report-fr setup combine-en combine-fr clean deps install-chromium preview-en preview-fr open help check-marp
