@@ -140,6 +140,27 @@ The eBPF verifier performs exhaustive static analysis:
   [Latency impact #sym.lt 1 microsecond per event],
 )
 
+== Growing Ecosystem
+
+eBPF's use cases extend well beyond security monitoring. Recent kernel developments include:
+
+#list(
+  [
+    *CPU scheduling (Linux 6.12+):* sched_ext allows custom CPU schedulers loaded dynamically without kernel recompilation
+  ],
+  [
+    *I/O scheduling (RFC 2026):* UFQ moves I/O scheduling to user-space for greater flexibility
+  ],
+  [
+    *Network processing:* XDP provides high-performance packet filtering before the kernel network stack
+  ],
+  [
+    *Security observability:* Tetragon provides kernel-level threat detection with minimal overhead
+  ],
+)
+
+This ecosystem momentum indicates eBPF is becoming a [*core kernel extensibility mechanism*] — a strategic technology worth investing in.
+
 = Deployment Strategy
 
 == Prerequisites

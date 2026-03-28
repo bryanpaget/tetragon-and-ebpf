@@ -140,6 +140,27 @@ Le vérificateur eBPF effectue une analyse statique exhaustive :
   [Impact de latence #sym.lt 1 microseconde par événement],
 )
 
+== Écosystème en croissance
+
+Les cas d'utilisation d'eBPF s'étendent bien au-delà de la surveillance de sécurité. Les développements récents du noyau incluent :
+
+#list(
+  [
+    *Ordonnancement CPU (Linux 6.12+) :* sched_ext permet de charger dynamiquement des ordonnanceurs CPU personnalisés sans recompilation du noyau
+  ],
+  [
+    *Ordonnancement E/S (RFC 2026) :* UFQ déplace l'ordonnancement des E/S vers l'espace utilisateur pour plus de flexibilité
+  ],
+  [
+    *Traitement réseau :* XDP fournit un filtrage de paquets haute performance avant la pile réseau du noyau
+  ],
+  [
+    *Observabilité de sécurité :* Tetragon fournit une détection de menaces au niveau du noyau avec un impact minimal
+  ],
+)
+
+Cette dynamique de l'écosystème indique qu'eBPF devient un [*mécanisme central d'extensibilité du noyau*] — une technologie stratégique dans laquelle il vaut la peine d'investir.
+
 = Stratégie de déploiement
 
 == Prérequis
