@@ -1,22 +1,19 @@
 <!-- Diapositive de titre -->
 <!-- _class: lead -->
-# Tetragon et eBPF
+# Qu'est-ce que Tetragon (et eBPF) ?
+![bg left:20%](./img/canada-1.png)
+
+![w:200px](https://tetragon.io/images/tetragon-shield.png)
 
 <br>
 
 ### L'observabilité de sécurité depuis le noyau
 
 <br>
-<br>
 
 #### Statistique Canada 2026
 
-<br>
-<br>
-<br>
-
-###### *Présenté par l'équipe de la Zone*
-![bg left:20%](./img/canada-1.png)
+*Présenté par l'équipe de la Zone*
 
 ---
 
@@ -36,33 +33,12 @@ De la recherche au déploiement prêt pour la production.
 
 ---
 
-<!-- État actuel -->
-## État actuel et voie à suivre
-
-![bg left:20%](./img/canada-1.png)
-
-**En février 2026 :**
-
-- Tetragon activé **de manière expérimentale dans les grappes Aurora**
-- Migration prévue vers `cloudnative-platform-charts` (aucun calendrier)
-
-**Opportunité :**
-
-- Accélérer l'adoption en contribuant nous-mêmes le chart
-- Valider dans **Zone DEV** utilisant AKS + Kubeflow
-
-<blockquote>
-Connaissances de SSC Aurora à StatCan The Zone – collaboration pour un avenir meilleur.
-</blockquote>
-
----
-
 <!-- Motivation : Pourquoi l'espace noyau? -->
 ## Pourquoi l'espace noyau importe
 
-![bg left:20%](./img/canada-1.png)
-
 **Le problème :** Les outils de sécurité dans l'espace utilisateur paient une taxe cachée sur chaque événement.
+
+![bg left:20%](./img/canada-1.png)
 
 **Pourquoi l'espace utilisateur est plus lent :**
 1. **Changements de contexte :** Le CPU doit sauvegarder/restaurer l'état en traversant la frontière noyau↔utilisateur
@@ -71,16 +47,17 @@ Connaissances de SSC Aurora à StatCan The Zone – collaboration pour un avenir
 
 ---
 
+<!-- Motivation : Pourquoi l'espace noyau? -->
 ## Pourquoi l'espace noyau importe (suite)
+
+**Le principe de proximité :** Déplacer le calcul vers les données.
 
 ![bg left:20%](./img/canada-1.png)
 
 **Exemple concret : NTSYNC (Wine 11)**
-- **Avant :** La synchronisation des threads nécessitait des allers-retours vers le processus wineserver
-- **Après :** Le module noyau NTSYNC gère les primitives de synchronisation directement dans le noyau
+- **Avant :** La synchronisation des threads nécessitait des allers-retours vers le processus wineserver (2 changements de contexte)
+- **Après :** Le module noyau NTSYNC gère la synchronisation dans le noyau
 - **Résultat :** Jusqu'à **778 % d'amélioration FPS** dans les jeux multi-threadés
-
-**Le motif :** Le matériel et le logiciel suivent tous deux le **Principe de Proximité**.
 
 <blockquote>
 Déplacer le calcul vers les données, pas les données vers le calcul.
@@ -88,34 +65,15 @@ Déplacer le calcul vers les données, pas les données vers le calcul.
 
 ---
 
-<!-- Le principe de proximité -->
-## Le principe de proximité
-
-![bg left:20%](./img/canada-1.png)
-
-**Déplacer le calcul vers les données.**
-
-**Exemples :**
-- **Matériel :** Mémoire unifiée Apple M-series élimine la surcharge PCIe
-- **Jeux :** NTSYNC garde la synchronisation dans le noyau (778 % FPS)
-- **Sécurité :** eBPF traite les événements à la source, avant copie
-
-<blockquote>
-Une optimisation fondamentale dans toute l'informatique.
-</blockquote>
-
----
-
 <!-- Qu'est-ce que Tetragon? -->
 ## Qu'est-ce que Tetragon ?
 
-![bg left:20%](./img/canada-1.png)
-
 **Observabilité de sécurité et application d'exécution basées sur eBPF**
 
-Tetragon est un outil flexible d'observabilité de sécurité et d'application d'exécution pour Kubernetes qui applique des politiques et des filtres directement avec eBPF, permettant une surveillance réduite, le suivi de tout processus et l'application de politiques en temps réel.
+![bg left:20%](./img/canada-1.png)
+![w:128px](https://tetragon.io/images/home/hero-illustration.png)
 
-![w:120px](https://tetragon.io/images/home/hero-illustration.png)
+Tetragon est un outil flexible d'observabilité de sécurité et d'application d'exécution pour Kubernetes qui opère dans l'espace noyau en utilisant eBPF. En appliquant des politiques et des filtres directement dans le noyau, il permet une surveillance réduite, le suivi de tout processus et l'application de politiques en temps réel.
 
 **En savoir plus :** <a href="https://tetragon.io/">tetragon.io</a>
 
@@ -124,6 +82,7 @@ Tetragon est un outil flexible d'observabilité de sécurité et d'application d
 ## Qu'est-ce que Tetragon ? (suite)
 
 ![bg left:20%](./img/canada-1.png)
+![w:128px](https://tetragon.io/images/home/hero-illustration.png)
 
 **Avantages clés :**
 - Conformité aux exigences eBPF
@@ -140,59 +99,30 @@ Surveillance de sécurité depuis le noyau.
 <!-- Qu'est-ce que eBPF? -->
 ## Qu'est-ce que eBPF ?
 
-![bg left:20%](./img/canada-1.png)
-
 **eBPF (Extended Berkeley Packet Filter) :** Une machine virtuelle dans le noyau qui exécute en toute sécurité des programmes fournis par l'utilisateur.
+
+![bg left:20%](./img/canada-1.png)
+![w:128px](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/EBPF_logo.png/250px-EBPF_logo.png)
 
 **Propriétés clés :**
 - S'exécute dans le noyau Linux — aucun module noyau requis
 - **Vérificateur** garantit la sécurité avant le chargement (prouvé mathématiquement)
 - S'attache aux événements du noyau : appels système, entrée/sortie de fonctions, points de trace, hooks LSM
-- Accès aux données du noyau via des fonctions auxiliaires contrôlées
-
-<blockquote>
-1992 : BPF pour le filtrage de paquets. 2014 : eBPF généralisé au-delà du réseau.
-</blockquote>
 
 ---
 
-<!-- Concepts de base eBPF -->
-## Concepts de base d'eBPF
+<!-- Qu'est-ce que eBPF? -->
+## Qu'est-ce que eBPF ? (suite)
 
+**eBPF (Extended Berkeley Packet Filter) :** Une machine virtuelle dans le noyau qui exécute en toute sécurité des programmes fournis par l'utilisateur.
+
+![w:128px](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/EBPF_logo.png/250px-EBPF_logo.png)
 ![bg left:20%](./img/canada-1.png)
 
-Pour la surveillance des menaces en temps réel de Tetragon, eBPF attache de petits programmes aux événements du noyau.
-
-**Programme eBPF :** Séquence finie d'instructions de type RISC sur des registres 64 bits, pile de 512 octets
-
-**Point d'attache :** Emplacement du noyau où les programmes eBPF s'attachent :
-- `kprobe` / `kretprobe` : Instrumentation dynamique de fonctions du noyau
-- `tracepoint` : Points de trace statiquement définis (p. ex. `sys_enter_execve`)
-- `cgroup-bpf` : Points d'attache des appels système par conteneur (critique pour Kubernetes)
-- `LSM` : Points d'attache du module de sécurité Linux – appliquent les politiques de sécurité
-
-<blockquote>
-Code sûr et efficace s'exécutant dans le noyau.
-</blockquote>
-
----
-
-<!-- Théorèmes de sécurité -->
-## Les garanties de sécurité
-
-![bg left:20%](./img/canada-1.png)
-
-Les garanties du vérificateur rendent eBPF sûr pour la production :
-
-**Terminaison**
-- Pas de boucles infinies. Tous les sauts arrière doivent être bornés
-
-**Sécurité mémoire**
-- Ne peut pas accéder à la mémoire du noyau en dehors de la pile, des cartes ou du contexte désignés
-
-**Bornitude des ressources**
-- Bornes supérieures statiquement connues sur le temps d'exécution et la mémoire
-- Nombre maximal d'instructions, pile de 512 octets, tailles de cartes fixes
+**Garanties de sécurité :**
+- Pas de boucles infinies – tous les programmes se terminent
+- Sécurité mémoire – peut seulement accéder à la pile, aux cartes et au contexte désignés
+- Bornes de ressources – ~1M d'instructions max, 512 octets de pile
 
 <blockquote>
 Code prouvé sûr dans le noyau – vérifié avant le chargement.
@@ -200,22 +130,146 @@ Code prouvé sûr dans le noyau – vérifié avant le chargement.
 
 ---
 
-<!-- Implémentation eBPF de Tetragon -->
-## L'implémentation eBPF de Tetragon
+<!-- Architecture Tetragon -->
+<!-- _class: lead -->
+
+![](https://tetragon.io/svgs/diagram-illustration.svg)
+
+---
+
+<!-- Architecture de déploiement -->
+## Architecture de déploiement
 
 ![bg left:20%](./img/canada-1.png)
 
-**Composants clés :**
+**Composants :**
+- **DaemonSet :** Un agent par nœud, charge les programmes eBPF
+- **Operator :** Contrôle centralisé, gère les TracingPolicy CRDs
+- **Export d'événements :** Elasticsearch, Kafka, gRPC, stdout
 
-**TracingPolicy :** CRD Kubernetes définissant :
-- Quels événements tracer (points d'attache)
-- Conditions de correspondance (binaires, arguments)
-- Actions (générer un événement, terminer un processus)
+**Ressources :**
+- CPU : #sym.lt 1% par nœud
+- Mémoire : ~100-200 MiB par nœud
+- Conteneur privilégié requis
 
-**Agent Tetragon :** DaemonSet sur chaque nœud qui :
-- Charge les programmes eBPF depuis les politiques
-- Collecte les événements des cartes eBPF
-- Exporte vers des destinations configurées (stdout, ELK, etc.)
+---
+
+<!-- Comment nous interagissons -->
+## Comment nous interagissons avec Tetragon
+
+**Pas d'interface dédiée** – s'intègre parfaitement aux outils existants.
+
+---
+
+## CLI (`tetra`)
+
+![bg left:20%](./img/canada-1.png)
+
+Visualisation des événements en temps réel et débogage.
+
+```bash
+# Streamer les événements de tous les pods
+tetra getevents -o compact
+
+# Surveiller un namespace spécifique
+tetra getevents --namespace default \
+  --field-selector "process.pod.name=my-app"
+```
+
+---
+
+## TracingPolicies as Code
+
+![bg left:20%](./img/canada-1.png)
+
+- Configuration YAML, versionnée dans **Git**
+- Déployée via **ArgoCD** (GitOps)
+
+Extrait de politique :
+```yaml
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: monitor-curl
+spec:
+  podSelector:
+    matchLabels:
+      app: my-app
+  hooks:
+    - path: /usr/bin/curl
+      syscalls:
+        - execve
+      args:
+        - action: Post
+          valueFd: 1
+```
+
+---
+
+## Export d'événements et tableaux de bord
+
+![bg left:20%](./img/canada-1.png)
+
+- **Elasticsearch** – stocke tous les événements Tetragon
+- **Grafana** – crée des tableaux de bord personnalisés avec la source de données Elasticsearch
+  - Visualiser les exécutions de processus, flux réseau et événements de sécurité
+  - Alerter en cas d'activité suspecte
+
+---
+
+## API gRPC
+
+![bg left:20%](./img/canada-1.png)
+
+Accès programmatique pour les intégrations personnalisées (p. ex. SIEM, automatisation).
+
+```python
+import tetragon_grpc
+
+client = tetragon_grpc.TetragonClient()
+for event in client.get_events():
+    print(event.process.exec)
+```
+
+---
+
+## GitOps avec ArgoCD
+
+![bg left:20%](./img/canada-1.png)
+
+- TracingPolicies stockées dans le dépôt Git
+- ArgoCD synchronise automatiquement les politiques vers les grappes
+- Permet le contrôle de version, l'audit et le rollback
+
+---
+
+> **Résultat :** Observabilité de sécurité unifiée utilisant des outils familiers – CLI, Git, Elasticsearch, Grafana, ArgoCD.
+
+---
+
+<!-- Flux d'événements -->
+## Flux d'événements et notifications
+
+![bg left:20%](./img/canada-1.png)
+
+**Cycle de vie :**
+Événement noyau → Capture eBPF → Enrichissement Kubernetes → Export → Alerte
+
+**Chemins de notification :**
+- **Critique :** PagerDuty → garde
+- **Élevé :** Slack #security-alerts
+- **Moyen :** Résumé par courriel
+- **Faible :** Rapport quotidien
+
+**Intégration Zone :** ELK, PagerDuty existant, tableaux de bord Kubernetes
+
+---
+
+<!-- Architecture Tetragon -->
+<!-- _class: lead -->
+## Architecture Tetragon
+
+![bg fit:70%](https://tetragon.io/svgs/diagram-illustration.svg)
 
 ---
 
@@ -283,6 +337,51 @@ spec:
 
 ---
 
+<!-- Ce qu'on surveille -->
+## Ce qu'on surveille : Cas d'utilisation
+
+![bg left:20%](./img/canada-1.png)
+
+- **Accès identifiants :** `/etc/shadow`, `~/.kube/config` – prévenir le vol
+- **Échappements shell :** `/bin/bash` depuis notebooks – prévenir breakout
+- **Exfiltration :** IPs externes, gros transferts – détecter vol de données
+- **Élévation privilèges :** `setuid`, `setgid`, `capset` – prévenir attaques
+- **Fichiers sensibles :** Secrets, jetons, certificats – protéger comptes de service
+
+---
+
+<!-- Éviter les faux positifs -->
+## Éviter les faux positifs
+
+![bg left:20%](./img/canada-1.png)
+
+**Mode audit :** Déployer sans application, ligne de base 1-2 semaines.
+
+**Être spécifique :** Chemins exacts (`/usr/bin/python3`) pas de motifs.
+
+**Par namespace :** Lignes de base différentes selon la charge.
+
+**Raffinement itératif :** Déployer → observer → affiner → répéter.
+
+**Documenter :** Runbook des faux positifs connus.
+
+---
+
+<!-- Politiques maintenables -->
+## Construire des politiques maintenables
+
+![bg left:20%](./img/canada-1.png)
+
+**Contrôle de version :** Stocker dans Git, review via pull requests.
+
+**Pipeline CI/CD :** Valider YAML, déployer DEV, tester, promouvoir.
+
+**Documentation :** Détection, faux positifs, réponse, propriétaire.
+
+**Cycle de vie :** Review trimestriel, supprimer inutilisé, mettre à jour.
+
+---
+
 <!-- Plan de déploiement -->
 ## Plan de déploiement / Installation (1/2)
 
@@ -293,13 +392,17 @@ spec:
    helm repo add cilium https://helm.cilium.io
    helm repo update
 
-   # 2. Créer le namespace et installer Tetragon :
-   kubectl create namespace tetragon
-   helm install tetragon cilium/tetragon -n tetragon
+   # 2. Installer Tetragon avec Helm :
+   helm install tetragon cilium/tetragon \
+     --namespace tetragon \
+     --create-namespace
 
    # 3. Vérifier l'installation :
    kubectl -n tetragon get pods
    # Devrait voir les pods DaemonSet tetragon-* en cours d'exécution
+
+   # 4. Installer tetra CLI (optionnel) :
+   go install github.com/cilium/tetragon/tetra@latest
    ```
 
 ---
@@ -310,7 +413,7 @@ spec:
 ![bg left:20%](./img/canada-1.png)
 
    ```bash
-   # 4. Déployer une TracingPolicy (détection accès identifiants) :
+   # 5. Déployer une TracingPolicy :
    cat <<EOF | kubectl apply -f -
    apiVersion: cilium.io/v1alpha1
    kind: TracingPolicy
@@ -325,11 +428,11 @@ spec:
              values: [/bin/bash, /bin/sh]
          matchArgs:
            - index: 0
-             operator: Contains
-             values: [passwd, shadow]
+           operator: Contains
+           values: [passwd, shadow]
    EOF
 
-   # 5. Voir les événements en temps réel :
+   # 6. Voir les événements en temps réel :
    kubectl port-forward -n tetragon ds/tetragon 54321:54321
    tetra getevents -o compact
    ```
@@ -359,7 +462,7 @@ Configuration prête pour la production validée dans Aurora.
 ---
 
 <!-- Prochaines étapes -->
-## Prochaines étapes et questions ouvertes
+## Prochaines étapes
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -371,11 +474,6 @@ Configuration prête pour la production validée dans Aurora.
    - Installer via Helm avec des remplacements pour AKS
    - Appliquer les TracingPolicies de base (exécution de processus, écritures de fichiers, réseau)
 3. **Documentation :** Documenter la configuration, les politiques et l'intégration avec la surveillance existante (ELK / Splunk)
-
-**Questions à répondre :**
-- Surcharge de performance sous charge de production (surtout avec les tâches d'entraînement Kubeflow) ?
-- Comment intégrer les événements Tetragon avec notre SIEM existant ?
-- Quelles politiques sont les plus utiles pour les composants Kubeflow ?
 
 ---
 
@@ -409,6 +507,31 @@ Configuration prête pour la production validée dans Aurora.
 - Créer un pipeline CI/CD pour les mises à jour TracingPolicy
 - Implémenter l'alerte sur les événements critiques (p. ex. accès aux identifiants)
 - Documenter pour l'équipe élargie
+
+---
+
+<!-- Feuille de route -->
+## Feuille de route d'implémentation
+
+![bg left:20%](./img/canada-1.png)
+
+**Semaines 1-2 : Déployer et établir une ligne de base**
+- Déployer Tetragon dans la grappe AKS Zone DEV
+- Déployer les TracingPolicies de base (mode audit)
+- Exporter les événements vers un index Elasticsearch de test
+- Mesurer la surcharge (CPU #sym.lt 1%, mémoire #sym.lt 200 MiB)
+
+**Semaines 3-4 : Ajuster et intégrer**
+- Affiner les politiques selon les événements observés
+- Définir les SLO (latence #sym.lt 100ms, disponibilité 99,9%)
+- Créer un module Terraform pour `cloudnative-platform-charts`
+- Intégrer avec ELK/Splunk existant
+
+**Semaines 5-6 : Automatiser et alerter**
+- Créer un pipeline CI/CD pour les mises à jour de TracingPolicy
+- Implémenter l'alerte (PagerDuty, Slack, courriel)
+- Documenter les procédures et guides de dépannage
+- Partager les découvertes à l'échelle de l'organisation
 
 ---
 

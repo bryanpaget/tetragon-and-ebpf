@@ -4,7 +4,7 @@
 #import "@preview/barcala:0.3.0": informe
 
 #show: informe.with(
-  institucion: text(size: 24pt, weight: "bold")[🍁],
+  institucion: image("tetragon-shield.png", width: 80pt),
   unidad-academica: text(size: 18pt)[Statistics Canada],
   asignatura: "Zone Team | Cloud-Native Platform",
   trabajo: [Technical Report],
@@ -16,7 +16,7 @@
   resumen: [
     We recommend adopting *Tetragon* as the primary security observability platform for Statistics Canada's Kubernetes infrastructure. Tetragon is already running experimentally in Aurora clusters (SSC's managed Kubernetes service). The risk profile is low: the eBPF verifier mathematically guarantees program safety, and resource consumption is minimal (CPU #sym.lt 1%, memory ~100-200 MiB per node). This report provides technical details, deployment strategy, and a six-week implementation roadmap.
   ],
-  fecha: "2026-03-26",
+  fecha: "2026-03-30",
   formato: (
     tipografia: "Inter",
     margenes: "simétricos",
@@ -256,6 +256,156 @@ For advanced setups, apply additional TracingPolicies to monitor specific namesp
 == Azure AKS Considerations
 
 Azure Kubernetes Service requires privileged containers for eBPF. Use `az aks update` to enable them. Helm values should specify resource requests (100m CPU, 256 MiB memory) and limits (500m CPU, 512 MiB memory), enable privileged mode, and configure event export to Elasticsearch.
+
+= Operations Guide
+
+== How We Interact with Tetragon
+
+Tetragon has no dedicated UI—it integrates with existing tools:
+
+=== CLI (`tetra`)
+
+Real-time event viewing and debugging:
+
+```bash
+# Stream events from all pods
+tetra getevents -o compact
+
+# Watch specific namespace
+tetra getevents --namespace default \
+  --field-selector "process.pod.name=my-app"
+```
+
+=== TracingPolicies as Code
+
+- YAML configuration, versioned in **Git**
+- Deployed via **ArgoCD** (GitOps)
+- Enables version control, auditing, and rollback
+
+Example policy:
+```yaml
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: monitor-curl
+spec:
+  podSelector:
+    matchLabels:
+      app: my-app
+  hooks:
+    - path: /usr/bin/curl
+      syscalls:
+        - execve
+      args:
+        - action: Post
+          valueFd: 1
+```
+
+=== Event Export & Dashboards
+
+- **Elasticsearch:** Store all Tetragon events
+- **Grafana:** Build custom dashboards using Elasticsearch data source
+  - Visualize process executions, network flows, and security events
+  - Alert on suspicious activity
+
+=== gRPC API
+
+Programmatic access for custom integrations (SIEM, automation):
+
+```python
+import tetragon_grpc
+
+client = tetragon_grpc.TetragonClient()
+for event in client.get_events():
+    print(event.process.exec)
+```
+
+=== GitOps with ArgoCD
+
+- TracingPolicies stored in Git repository
+- ArgoCD syncs policies automatically to clusters
+- Continuous deployment with audit trail
+
+[*Outcome:*] Unified security observability using familiar tools – CLI, Git, Elasticsearch, Grafana, ArgoCD.
+
+== Event Flow & Notifications
+
+Events follow this lifecycle:
+
+#enum(
+  [
+    *Kernel Event:* Process executes, file accessed, connection made
+  ],
+  [
+    *eBPF Capture:* Tetragon agent captures event in kernel via eBPF
+  ],
+  [
+    *Enrichment:* Agent adds Kubernetes metadata (pod, namespace, labels)
+  ],
+  [
+    *Export:* Event sent to configured sink (Elasticsearch, Kafka, stdout)
+  ],
+  [
+    *Alerting:* SIEM/monitoring tools trigger alerts based on rules
+  ],
+)
+
+[*Notification Paths:*]
+
+#table(
+  columns: (1fr, 1fr, 1fr),
+  inset: 6pt,
+  [Severity], [Example], [Notification],
+  [Critical], [Credential access], [PagerDuty → on-call],
+  [High], [Shell escape], [Slack channel],
+  [Medium], [Unusual connections], [Email digest],
+  [Low], [Policy violations], [Daily report],
+)
+
+== Building Maintainable Policies
+
+**Version Control:**
+Store TracingPolicies in Git, review via pull requests, tag releases with chart versions.
+
+**CI/CD Pipeline:**
+Validate YAML syntax, deploy to DEV, run smoke tests, promote to production.
+
+**Policy Documentation:**
+Each policy should document: what it detects, known false positives, appropriate response, and ownership.
+
+**Lifecycle Management:**
+Review policies quarterly, remove unused policies, update based on new threat intelligence.
+
+== Avoiding False Positives
+
+**Start in Audit Mode:**
+Deploy policies without enforcement. Baseline normal behavior for 1-2 weeks. Tune based on observed events.
+
+**Be Specific:**
+Use exact binary paths (`/usr/bin/python3`) not patterns (`*python*`).
+
+**Namespace-Specific Policies:**
+Different baselines for different workloads. Jupyter namespace ≠ training namespace ≠ inference.
+
+**Iterative Refinement:**
+Deploy → observe → identify false positives → refine → repeat until acceptable signal-to-noise ratio.
+
+== What We Monitor: Use Cases
+
+**Credential Access Detection:**
+Files: `/etc/shadow`, `/etc/passwd`, `~/.kube/config`. Commands: `passwd`, `ssh-keygen`, `kubectl config`. Prevents credential theft and lateral movement.
+
+**Shell Escape Prevention:**
+Detect `/bin/sh`, `/bin/bash` spawned from notebook processes. Context: Jupyter pods, training jobs. Prevents container breakout attempts.
+
+**Data Exfiltration:**
+Connections to IPs outside cluster CIDR, large outbound data transfers. Detects data theft, crypto mining.
+
+**Privilege Escalation:**
+`setuid`, `setgid`, `capset` system calls, unexpected root access. Prevents privilege escalation attacks.
+
+**Sensitive File Access:**
+Secrets, tokens, certificates, `/var/run/secrets/kubernetes.io`. Protects service account tokens.
 
 = Implementation Roadmap
 

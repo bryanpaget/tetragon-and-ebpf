@@ -4,7 +4,7 @@
 #import "@preview/barcala:0.3.0": informe
 
 #show: informe.with(
-  institucion: text(size: 24pt, weight: "bold")[🍁],
+  institucion: image("tetragon-shield.png", width: 80pt),
   unidad-academica: text(size: 18pt)[Statistique Canada],
   asignatura: "Équipe de la Zone | Plateforme cloud-native",
   trabajo: [Rapport technique],
@@ -16,7 +16,7 @@
   resumen: [
     Nous recommandons d'adopter *Tetragon* comme plateforme principale d'observabilité de sécurité pour l'infrastructure Kubernetes de Statistique Canada. Tetragon est déjà en cours d'exécution expérimentale dans les grappes Aurora (service Kubernetes géré de SSC). Le profil de risque est faible : le vérificateur eBPF garantit mathématiquement la sécurité des programmes et la consommation de ressources est minimale (CPU #sym.lt 1%, mémoire ~100-200 MiB par nœud). Ce rapport fournit les détails techniques, la stratégie de déploiement et une feuille de route d'implémentation de six semaines.
   ],
-  fecha: "2026-03-26",
+  fecha: "2026-03-30",
   formato: (
     tipografia: "Inter",
     margenes: "simétricos",
@@ -256,6 +256,156 @@ Pour des configurations avancées, appliquez des TracingPolicies supplémentaire
 == Considérations Azure AKS
 
 Azure Kubernetes Service nécessite des conteneurs privilégiés pour eBPF. Utilisez `az aks update` pour les activer. Les valeurs Helm doivent spécifier les demandes de ressources (100m CPU, 256 MiB mémoire) et les limites (500m CPU, 512 MiB mémoire), activer le mode privilégié et configurer l'export d'événements vers Elasticsearch.
+
+= Guide opérationnel
+
+== Comment nous interagissons avec Tetragon
+
+Tetragon n'a pas d'interface dédiée—il s'intègre aux outils existants :
+
+=== CLI (`tetra`)
+
+Visualisation des événements en temps réel et débogage :
+
+```bash
+# Streamer les événements de tous les pods
+tetra getevents -o compact
+
+# Surveiller un namespace spécifique
+tetra getevents --namespace default \
+  --field-selector "process.pod.name=my-app"
+```
+
+=== TracingPolicies as Code
+
+- Configuration YAML, versionnée dans **Git**
+- Déployée via **ArgoCD** (GitOps)
+- Permet le contrôle de version, l'audit et le rollback
+
+Exemple de politique :
+```yaml
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: monitor-curl
+spec:
+  podSelector:
+    matchLabels:
+      app: my-app
+  hooks:
+    - path: /usr/bin/curl
+      syscalls:
+        - execve
+      args:
+        - action: Post
+          valueFd: 1
+```
+
+=== Export d'événements et tableaux de bord
+
+- **Elasticsearch :** Stocke tous les événements Tetragon
+- **Grafana :** Crée des tableaux de bord personnalisés avec la source de données Elasticsearch
+  - Visualiser les exécutions de processus, flux réseau et événements de sécurité
+  - Alerter en cas d'activité suspecte
+
+=== API gRPC
+
+Accès programmatique pour les intégrations personnalisées (SIEM, automatisation) :
+
+```python
+import tetragon_grpc
+
+client = tetragon_grpc.TetragonClient()
+for event in client.get_events():
+    print(event.process.exec)
+```
+
+=== GitOps avec ArgoCD
+
+- TracingPolicies stockées dans le dépôt Git
+- ArgoCD synchronise automatiquement les politiques vers les grappes
+- Déploiement continu avec piste d'audit
+
+[*Résultat :*] Observabilité de sécurité unifiée utilisant des outils familiers – CLI, Git, Elasticsearch, Grafana, ArgoCD.
+
+== Flux d'événements et notifications
+
+Les événements suivent ce cycle de vie :
+
+#enum(
+  [
+    *Événement noyau :* Processus s'exécute, fichier accédé, connexion établie
+  ],
+  [
+    *Capture eBPF :* L'agent Tetragon capture l'événement dans le noyau via eBPF
+  ],
+  [
+    *Enrichissement :* L'agent ajoute les métadonnées Kubernetes (pod, namespace, étiquettes)
+  ],
+  [
+    *Export :* L'événement est envoyé à la destination configurée (Elasticsearch, Kafka, stdout)
+  ],
+  [
+    *Alerte :* Les outils SIEM/surveillance déclenchent des alertes selon les règles
+  ],
+)
+
+[*Chemins de notification :*]
+
+#table(
+  columns: (1fr, 1fr, 1fr),
+  inset: 6pt,
+  [Sévérité], [Exemple], [Notification],
+  [Critique], [Accès identifiants], [PagerDuty → garde],
+  [Élevé], [Échappement shell], [Canal Slack],
+  [Moyen], [Connexions inhabituelles], [Résumé par courriel],
+  [Faible], [Violations de politiques], [Rapport quotidien],
+)
+
+== Construire des politiques maintenables
+
+**Contrôle de version :**
+Stocker les TracingPolicies dans Git, réviser via des pull requests, taguer les versions avec les versions du chart.
+
+**Pipeline CI/CD :**
+Valider la syntaxe YAML, déployer dans DEV, exécuter des tests de fumée, promouvoir en production.
+
+**Documentation des politiques :**
+Chaque politique doit documenter : ce qu'elle détecte, les faux positifs connus, la réponse appropriée, et la propriété.
+
+**Gestion du cycle de vie :**
+Réviser les politiques trimestriellement, supprimer les politiques inutilisées, mettre à jour selon les nouveaux renseignements sur les menaces.
+
+== Éviter les faux positifs
+
+**Commencer en mode audit :**
+Déployer les politiques sans application. Établir une ligne de base pendant 1-2 semaines. Ajuster selon les événements observés.
+
+**Être spécifique :**
+Utiliser des chemins binaires exacts (`/usr/bin/python3`) pas des motifs (`*python*`).
+
+**Politiques par namespace :**
+Différentes lignes de base pour différentes charges de travail. Namespace Jupyter ≠ namespace d'entraînement ≠ inférence.
+
+**Raffinement itératif :**
+Déployer → observer → identifier les faux positifs → affiner → répéter jusqu'à un ratio signal/bruit acceptable.
+
+== Ce qu'on surveille : Cas d'utilisation
+
+**Détection d'accès aux identifiants :**
+Fichiers : `/etc/shadow`, `/etc/passwd`, `~/.kube/config`. Commandes : `passwd`, `ssh-keygen`, `kubectl config`. Prévient le vol d'identifiants et le mouvement latéral.
+
+**Prévention des échappements de shell :**
+Détecter `/bin/sh`, `/bin/bash` lancés depuis les processus notebook. Contexte : Pods Jupyter, tâches d'entraînement. Prévient les tentatives de breakout de conteneur.
+
+**Exfiltration de données :**
+Connexions vers des IPs hors CIDR de la grappe, transferts sortants de données volumineux. Détecte le vol de données, le minage de crypto.
+
+**Élévation de privilèges :**
+Appels système `setuid`, `setgid`, `capset`, accès root inattendu. Prévient les attaques par élévation de privilèges.
+
+**Accès aux fichiers sensibles :**
+Secrets, jetons, certificats, `/var/run/secrets/kubernetes.io`. Protège les jetons de compte de service.
 
 = Feuille de route d'implémentation
 

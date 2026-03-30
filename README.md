@@ -6,7 +6,7 @@
 
 ## From Observibility to Kernel Internals
 
-**Date:** 2026-03-23
+**Date:** 2026-03-30
 **Author:** Bryan Paget, Statistics Canada
 
 ---
@@ -346,7 +346,7 @@ Tetragon represents not just a compliance checkbox but a fundamental improvement
 
 ## Des exigences organisationnelles aux rouages du noyau
 
-**Date :** 2026-03-23
+**Date :** 2026-03-30
 **Auteur :** Bryan Paget, Statistique Canada
 
 ---

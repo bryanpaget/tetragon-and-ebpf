@@ -1,22 +1,19 @@
 <!-- Title Slide -->
 <!-- _class: lead -->
-# Tetragon and eBPF
+# What is Tetragon (and eBPF)?
+![bg left:20%](./img/canada-1.png)
+
+![w:200px](https://tetragon.io/images/tetragon-shield.png)
 
 <br>
 
 ### Security Observability from the Kernel Up
 
 <br>
-<br>
 
 #### Statistics Canada 2026
 
-<br>
-<br>
-<br>
-
-###### *Presented by the Zone Team*
-![bg left:20%](./img/canada-1.png)
+*Presented by the Zone Team*
 
 ---
 
@@ -36,51 +33,32 @@ From research to production-ready deployment.
 
 ---
 
-<!-- Current Status -->
-## Current Status and Path Forward
+<!-- Motivation: Why Kernel Space? -->
+## Why Kernel Space Matters
+
+**The Problem:** Userspace security tools pay a hidden tax on every event.
 
 ![bg left:20%](./img/canada-1.png)
 
-**As of February 2026:**
+**Why userspace is slower:**
+1. **Context switches:** CPU must save/restore state crossing kernel-user boundary
+2. **Data copying:** Event data copied from kernel memory to userspace buffers
+3. **Latency:** By the time userspace sees the event, the moment has passed
 
-- Tetragon enabled **experimentally in Aurora clusters**
-- Planned migration to `cloudnative-platform-charts` (no timeline)
-
-**Opportunity:**
-
-- Accelerate adoption by contributing the chart ourselves
-- Validate in **Zone DEV** using AKS + Kubeflow
-
-<blockquote>
-Knowledge from SSC's Aurora to StatCan's The Zone – collaboration for a better future.
-</blockquote>
 
 ---
 
 <!-- Motivation: Why Kernel Space? -->
-## Why Kernel Space Matters
-
-![bg left:20%](./img/canada-1.png)
-
-**The Problem:** Userspace security tools pay a hidden tax on every event.
-
-**Why userspace is slower:**
-1. **Context switches:** CPU must save/restore state crossing kernel/userspace boundary
-2. **Data copying:** Event data copied from kernel memory to userspace buffers
-3. **Latency:** By the time userspace sees the event, the moment has passed
-
----
-
 ## Why Kernel Space Matters (cont.)
+
+**The Principle of Proximity:** Move computation to where data resides.
 
 ![bg left:20%](./img/canada-1.png)
 
 **Real-world example: NTSYNC (Wine 11)**
-- **Before:** Thread sync required round‑trips from userspace to wineserver
-- **After:** NTSYNC kernel module handles sync primitives directly in‑kernel
+- **Before:** Thread sync required round‑trips to wineserver (2 context switches)
+- **After:** NTSYNC kernel module handles sync in‑kernel
 - **Result:** Up to **778% FPS improvement** in multi‑threaded games
-
-**The pattern:** Hardware and software both follow the **Principle of Proximity**.
 
 <blockquote>
 Move computation to data, not data to computation.
@@ -88,34 +66,15 @@ Move computation to data, not data to computation.
 
 ---
 
-<!-- The Principle of Proximity -->
-## The Principle of Proximity
-
-![bg left:20%](./img/canada-1.png)
-
-**Move computation to where data resides.**
-
-**Examples:**
-- **Hardware:** Apple M-series Unified Memory eliminates PCIe overhead
-- **Gaming:** NTSYNC keeps thread sync in-kernel (778% FPS boost)
-- **Security:** eBPF processes events at source, before copying to userspace
-
-<blockquote>
-A fundamental optimization across all computing.
-</blockquote>
-
----
-
 <!-- What is Tetragon? -->
 ## What is Tetragon?
 
-![bg left:20%](./img/canada-1.png)
-
 **eBPF-based Security Observability and Runtime Enforcement**
 
-Tetragon is a flexible Kubernetes-aware security observability and runtime enforcement tool that applies policy and filtering directly with eBPF, allowing for reduced observation overhead, tracking of any process, and real-time enforcement of policies.
+![bg left:20%](./img/canada-1.png)
+![w:128px](https://tetragon.io/images/home/hero-illustration.png)
 
-![w:120px](https://tetragon.io/images/home/hero-illustration.png)
+Tetragon is a flexible Kubernetes-aware security observability and runtime enforcement tool that operates in kernel space using eBPF. By applying policy and filtering directly in the kernel, it allows for reduced observation overhead, tracking of any process, and real-time enforcement of policies.
 
 **Learn more:** <a href="https://tetragon.io/">tetragon.io</a>
 
@@ -124,6 +83,7 @@ Tetragon is a flexible Kubernetes-aware security observability and runtime enfor
 ## What is Tetragon? (cont.)
 
 ![bg left:20%](./img/canada-1.png)
+![w:128px](https://tetragon.io/images/home/hero-illustration.png)
 
 **Key Benefits:**
 - Corporate compliance with eBPF requirements
@@ -140,59 +100,30 @@ Security monitoring from the kernel up.
 <!-- What is eBPF? -->
 ## What is eBPF?
 
-![bg left:20%](./img/canada-1.png)
-
 **eBPF (Extended Berkeley Packet Filter):** An in‑kernel virtual machine that safely runs user‑supplied programs.
+
+![bg left:20%](./img/canada-1.png)
+![w:128px](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/EBPF_logo.png/250px-EBPF_logo.png)
 
 **Key Properties:**
 - Runs inside the Linux kernel – no kernel module required
 - **Verifier** guarantees safety before loading (proven mathematically)
 - Attaches to kernel events: system calls, function entry/exit, tracepoints, LSM hooks
-- Access to kernel data via controlled helper functions
-
-<blockquote>
-1992: BPF for packet filtering. 2014: eBPF generalized beyond networking.
-</blockquote>
 
 ---
 
-<!-- Core eBPF Concepts -->
-## Core eBPF Concepts
+<!-- What is eBPF? -->
+## What is eBPF? (cont.)
 
+**eBPF (Extended Berkeley Packet Filter):** An in‑kernel virtual machine that safely runs user‑supplied programs.
+
+![w:128px](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/EBPF_logo.png/250px-EBPF_logo.png)
 ![bg left:20%](./img/canada-1.png)
 
-For Tetragon's real‑time threat monitoring, eBPF attaches small programs to kernel events.
-
-**eBPF Program:** Finite sequence of RISC‑like instructions on 64‑bit registers, 512‑byte stack
-
-**Hook:** Kernel location where eBPF programs attach:
-- `kprobe` / `kretprobe`: Dynamic kernel function instrumentation
-- `tracepoint`: Statically defined trace points (e.g., `sys_enter_execve`)
-- `cgroup‑bpf`: Per‑container system call hooks (critical for Kubernetes)
-- `LSM`: Linux Security Module hooks – enforce security policies
-
-<blockquote>
-Safe, efficient code running in the kernel.
-</blockquote>
-
----
-
-<!-- Safety Guarantees -->
-## The Safety Guarantees
-
-![bg left:20%](./img/canada-1.png)
-
-The verifier guarantees make eBPF safe for production:
-
-**Termination**
-- No infinite loops. All backward jumps must be bounded
-
-**Memory Safety**
-- Cannot access kernel memory outside designated stack, maps, or context
-
-**Resource Boundedness**
-- Statically known upper bounds on execution time and memory
-- Maximum instruction count, 512‑byte stack, fixed map sizes
+**Safety Guarantees:**
+- No infinite loops – all programs terminate
+- Memory safe – can only access designated stack, maps, context
+- Resource bounded – ~1M instructions max, 512 bytes stack
 
 <blockquote>
 Provably safe code in the kernel – verified before loading.
@@ -200,22 +131,138 @@ Provably safe code in the kernel – verified before loading.
 
 ---
 
-<!-- Tetragon's eBPF Implementation -->
-## Tetragon's eBPF Implementation
+<!-- Tetragon Architecture -->
+<!-- _class: lead -->
+
+![](https://tetragon.io/svgs/diagram-illustration.svg)
+
+---
+
+<!-- Deployment Architecture -->
+## Deployment Architecture
 
 ![bg left:20%](./img/canada-1.png)
 
-**Key Components:**
+**Components:**
+- **DaemonSet:** One agent per node, loads eBPF programs
+- **Operator:** Centralized control, manages TracingPolicy CRDs
+- **Event Export:** Elasticsearch, Kafka, gRPC, stdout
 
-**TracingPolicy:** Kubernetes CRD defining:
-- What events to trace (hooks)
-- Match conditions (binaries, arguments)
-- Actions (generate event, terminate process)
+**Resources:**
+- CPU: < 1% per node
+- Memory: ~100-200 MiB per node
+- Privileged container required
 
-**Tetragon Agent:** DaemonSet on each node that:
-- Loads eBPF programs from policies
-- Collects events from eBPF maps
-- Exports to configured sinks (stdout, ELK, etc.)
+---
+
+<!-- How We Interact -->
+## How We Interact with Tetragon
+
+**No dedicated UI** – integrates seamlessly with existing tools.
+
+---
+
+## CLI (`tetra`)
+
+![bg left:20%](./img/canada-1.png)
+
+Real-time event viewing and debugging.
+
+```bash
+# Stream events from all pods
+tetra getevents -o compact
+
+# Watch specific namespace
+tetra getevents --namespace default \
+  --field-selector "process.pod.name=my-app"
+```
+
+---
+
+## TracingPolicies as Code
+
+![bg left:20%](./img/canada-1.png)
+
+- YAML configuration, versioned in **Git**
+- Deployed via **ArgoCD** (GitOps)
+
+Example policy snippet:
+```yaml
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: monitor-curl
+spec:
+  podSelector:
+    matchLabels:
+      app: my-app
+  hooks:
+    - path: /usr/bin/curl
+      syscalls:
+        - execve
+      args:
+        - action: Post
+          valueFd: 1
+```
+
+---
+
+## Event Export & Dashboards
+
+![bg left:20%](./img/canada-1.png)
+
+- **Elasticsearch** – store all Tetragon events
+- **Grafana** – build custom dashboards using Elasticsearch data source
+  - Visualize process executions, network flows, and security events
+  - Alert on suspicious activity
+
+---
+
+## gRPC API
+
+![bg left:20%](./img/canada-1.png)
+
+Programmatic access for custom integrations (e.g., SIEM, automation).
+
+```python
+import tetragon_grpc
+
+client = tetragon_grpc.TetragonClient()
+for event in client.get_events():
+    print(event.process.exec)
+```
+
+---
+
+## GitOps with ArgoCD
+
+![bg left:20%](./img/canada-1.png)
+
+- TracingPolicies stored in Git repository
+- ArgoCD syncs policies automatically to clusters
+- Enables version control, auditing, and rollback
+
+---
+
+> **Outcome:** Unified security observability using familiar tools – CLI, Git, Elasticsearch, Grafana, ArgoCD.
+
+---
+
+<!-- Event Flow -->
+## Event Flow & Notifications
+
+![bg left:20%](./img/canada-1.png)
+
+**Event Lifecycle:**
+Kernel event → eBPF capture → Kubernetes enrichment → Export → Alert
+
+**Notification Paths:**
+- **Critical:** PagerDuty → on-call
+- **High:** Slack #security-alerts
+- **Medium:** Email digest
+- **Low:** Daily report
+
+**Zone Integration:** ELK stack, existing PagerDuty, Kubernetes dashboards
 
 ---
 
@@ -283,6 +330,51 @@ spec:
 
 ---
 
+<!-- What We Monitor -->
+## What We Monitor: Use Cases
+
+![bg left:20%](./img/canada-1.png)
+
+- **Credential Access:** `/etc/shadow`, `~/.kube/config` – prevent theft and lateral movement
+- **Shell Escapes:** `/bin/bash` from notebooks – prevent container breakout
+- **Data Exfiltration:** External IPs, large transfers – detect data theft
+- **Privilege Escalation:** `setuid`, `setgid`, `capset` – prevent attacks
+- **Sensitive Files:** Secrets, tokens, certificates – protect service accounts
+
+---
+
+<!-- Avoiding False Positives -->
+## Avoiding False Positives
+
+![bg left:20%](./img/canada-1.png)
+
+**Start in Audit Mode:** Deploy without enforcement, baseline for 1-2 weeks.
+
+**Be Specific:** Use exact paths (`/usr/bin/python3`) not patterns (`*python*`).
+
+**Namespace-Specific:** Different baselines for Jupyter vs training vs inference.
+
+**Iterative Refinement:** Deploy → observe → refine → repeat.
+
+**Document:** Maintain runbook of known false positives.
+
+---
+
+<!-- Building Maintainable Policies -->
+## Building Maintainable Policies
+
+![bg left:20%](./img/canada-1.png)
+
+**Version Control:** Store in Git, review via pull requests.
+
+**CI/CD Pipeline:** Validate YAML, deploy to DEV, test, promote.
+
+**Documentation:** What it detects, false positives, response, ownership.
+
+**Lifecycle:** Review quarterly, remove unused, update for threats.
+
+---
+
 <!-- Deployment Plan -->
 ## Deployment Plan / Installation (1/2)
 
@@ -293,13 +385,17 @@ spec:
    helm repo add cilium https://helm.cilium.io
    helm repo update
 
-   # 2. Create namespace and install Tetragon:
-   kubectl create namespace tetragon
-   helm install tetragon cilium/tetragon -n tetragon
+   # 2. Install Tetragon with Helm:
+   helm install tetragon cilium/tetragon \
+     --namespace tetragon \
+     --create-namespace
 
    # 3. Verify installation:
    kubectl -n tetragon get pods
    # Should see tetragon-* DaemonSet pods running
+
+   # 4. Install tetra CLI (optional):
+   go install github.com/cilium/tetragon/tetra@latest
    ```
 
 ---
@@ -310,7 +406,7 @@ spec:
 ![bg left:20%](./img/canada-1.png)
 
    ```bash
-   # 4. Deploy a TracingPolicy (credential access detection):
+   # 5. Deploy a TracingPolicy:
    cat <<EOF | kubectl apply -f -
    apiVersion: cilium.io/v1alpha1
    kind: TracingPolicy
@@ -325,11 +421,11 @@ spec:
              values: [/bin/bash, /bin/sh]
          matchArgs:
            - index: 0
-             operator: Contains
-             values: [passwd, shadow]
+           operator: Contains
+           values: [passwd, shadow]
    EOF
 
-   # 5. View events in real-time:
+   # 6. View events in real-time:
    kubectl port-forward -n tetragon ds/tetragon 54321:54321
    tetra getevents -o compact
    ```
@@ -337,9 +433,11 @@ spec:
 ---
 
 <!-- Next Steps -->
-## Next Steps and Open Questions
+## Next Steps
 
 ![bg left:20%](./img/canada-1.png)
+
+**Immediate Actions:**
 
 1. **Chart Porting:** Add Tetragon to `cloudnative-platform-charts`
 2. **DEV Deployment:** Deploy to Zone DEV (AKS) with:
@@ -347,11 +445,6 @@ spec:
    - Install via Helm with overrides for AKS
    - Apply baseline TracingPolicies (process exec, file writes, network)
 3. **Documentation:** Document configuration, policies, and integration with existing monitoring (ELK / Splunk)
-
-**Questions to Answer:**
-- Performance overhead under production load (especially with Kubeflow training jobs)?
-- How to integrate Tetragon events with our existing SIEM?
-- What policies are most useful for Kubeflow components?
 
 ---
 
@@ -385,6 +478,31 @@ spec:
 - Create CI/CD pipeline for TracingPolicy updates
 - Implement alerting on critical events (e.g., credential access)
 - Document for the wider team
+
+---
+
+<!-- Implementation Roadmap -->
+## Implementation Roadmap
+
+![bg left:20%](./img/canada-1.png)
+
+**Weeks 1-2: Deploy & Baseline**
+- Deploy Tetragon to Zone DEV AKS
+- Deploy baseline TracingPolicies (audit mode)
+- Export events to test Elasticsearch index
+- Measure overhead (CPU #sym.lt 1%, memory #sym.lt 200 MiB)
+
+**Weeks 3-4: Tune & Integrate**
+- Refine policies based on observed events
+- Define SLOs (latency #sym.lt 100ms, 99.9% availability)
+- Create Terraform module for `cloudnative-platform-charts`
+- Integrate with existing ELK/Splunk
+
+**Weeks 5-6: Automate & Alert**
+- Create CI/CD pipeline for TracingPolicy updates
+- Implement alerting (PagerDuty, Slack, email)
+- Document runbooks and troubleshooting guides
+- Share findings organization-wide
 
 ---
 

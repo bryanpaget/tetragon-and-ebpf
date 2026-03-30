@@ -2,7 +2,7 @@
 marp: true
 size: 16:9
 paginate: true
-footer: "2026-03-23 | Statistics Canada | Statistique Canada"
+footer: "2026-03-30 | Statistics Canada | Statistique Canada"
 header: ""
 theme: default
 style: |
@@ -50,7 +50,27 @@ style: |
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
-      padding-top: 2rem;
+      padding-top: 1.5rem;
+      position: relative;
+  }
+
+  /* Ensure content starts at consistent position */
+  section h2,
+  section h1,
+  section > p,
+  section > ul,
+  section > ol {
+      margin-top: 0;
+      position: relative;
+      z-index: 1;
+  }
+
+  /* Background images should not affect layout */
+  section > img[bg] {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
   }
 
   /* Header styles */
