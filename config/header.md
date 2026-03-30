@@ -29,11 +29,11 @@ style: |
 
       /* Size variables */
       --base-font-size: 12px;
-      --h1-size: 1.6em;
-      --h2-size: 1.4em;
-      --h3-size: 1.2em;
-      --p-size: 1em;
-      --code-size: 0.7em;
+      --h1-size: 1.5em;
+      --h2-size: 1.3em;
+      --h3-size: 1.1em;
+      --p-size: 0.9em;
+      --code-size: 0.8em;
 
       /* Spacing variables */
       --section-padding: 0.1rem;
@@ -90,18 +90,68 @@ style: |
   pre>code {
       font-family: var(--code-font);
       font-size: 0.6em;
-      background-color: #1e1e1e;
-      color: #d4d4d4;
+      background-color: #f5f5f5;
+      color: #2d2d2d;
       padding: 0.5rem;
       border-radius: 4px;
       line-height: 1.3;
       display: block;
       overflow-x: auto;
+      border: 1px solid #ddd;
   }
 
-  /* Force syntax highlighting colors to be visible */
-  pre>code .token {
-      color: inherit;
+  /* Syntax highlighting tokens - high contrast colors */
+  pre>code .token.comment,
+  pre>code .token.prolog,
+  pre>code .token.doctype,
+  pre>code .token.cdata {
+      color: #6a9955;
+  }
+
+  pre>code .token.punctuation {
+      color: #2d2d2d;
+  }
+
+  pre>code .token.property,
+  pre>code .token.tag,
+  pre>code .token.boolean,
+  pre>code .token.number,
+  pre>code .token.constant,
+  pre>code .token.symbol {
+      color: #0066cc;
+  }
+
+  pre>code .token.selector,
+  pre>code .token.attr-name,
+  pre>code .token.string,
+  pre>code .token.char,
+  pre>code .token.builtin {
+      color: #a31515;
+  }
+
+  pre>code .token.operator,
+  pre>code .token.entity,
+  pre>code .token.url,
+  pre>code .language-css .token.string,
+  pre>code .style .token.string {
+      color: #2d2d2d;
+  }
+
+  pre>code .token.atrule,
+  pre>code .token.attr-value,
+  pre>code .token.keyword {
+      color: #0000ff;
+  }
+
+  pre>code .token.function,
+  pre>code .token.class-name {
+      color: #795e26;
+  }
+
+  pre>code .token.regex,
+  pre>code .token.important,
+  pre>code .token.variable {
+      color: #e90;
   }
 
   /* Blockquote styles */
@@ -173,25 +223,48 @@ style: |
 
   /* References slide - smaller text */
   .references {
-      font-size: 0.85em;
+      font-size: 0.55em !important;
+      padding-bottom: 0.5rem;
   }
 
   .references h2 {
-      font-size: 1.2em;
-      margin-bottom: 0.5rem;
+      font-size: 1.3em !important;
+      margin-bottom: 0.3rem;
+      margin-top: 0;
   }
 
   .references p,
   .references li,
   .references a {
-      font-size: 0.85em;
-      line-height: 1.4;
+      font-size: 0.55em !important;
+      line-height: 1.25;
+      margin-bottom: 0.1rem;
   }
 
   .references strong {
-      font-size: 0.9em;
+      font-size: 0.6em !important;
       display: block;
-      margin-top: 0.8rem;
-      margin-bottom: 0.3rem;
+      margin-top: 0.5rem;
+      margin-bottom: 0.15rem;
+  }
+
+  .references ol {
+      margin-top: 0.2rem;
+      padding-left: 1.2rem;
+  }
+
+  .references li {
+      margin-bottom: 0.1rem;
+  }
+
+  .references a {
+      word-break: break-all;
+  }
+
+  /* References slide - full page layout */
+  section.references {
+      display: block;
+      padding-top: 1rem;
+      overflow: hidden;
   }
 ---

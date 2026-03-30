@@ -44,7 +44,9 @@
 
 ## 1.0 Tetragon: The Solution
 
-**Tetragon** is a Kubernetes-aware security observability and runtime enforcement tool that leverages eBPF to provide deep visibility into process, file, and network activity at the Linux kernel level. It enables real-time detection of and response to security threats with minimal performance overhead.
+**Tetragon** is an eBPF-based security observability and runtime enforcement tool for Kubernetes. It applies policy and filtering directly with eBPF, allowing for reduced observation overhead, tracking of any process, and real-time enforcement of policies.
+
+Learn more: [tetragon.io](https://tetragon.io/)
 
 Think of Tetragon as a security camera system for your containers—but one that doesn't just watch the doors and windows (network ports). It watches every action each process takes: every file it opens, every command it executes, every network connection it makes. And because it operates in the kernel, it sees these things as they happen, not after they've been reported up through multiple layers of software.
 
@@ -117,23 +119,14 @@ The verifier's guarantees are what make eBPF safe enough to run in production ke
 
 ## 3.0 The Principle of Proximity
 
-Modern computing systems face a fundamental challenge: moving data between components (CPU, memory, storage, network) often takes more time and energy than the actual computation. This is the **data movement bottleneck**.
+**Move computation to where data resides.**
 
-**Principle of Proximity:** Latency and energy consumption are minimized when computation is performed as close as possible to where data resides.
+Modern computing systems face a fundamental challenge: moving data between components often costs more than the actual computation. The Principle of Proximity states that latency is minimized when computation occurs as close as possible to where data resides.
 
-Data traverses interfaces with increasing latency: on-chip caches → main memory → storage → network. Co-locating computation with data reduces or eliminates these movement steps.
-
-This principle appears across system design:
-
-### 3.1 Unified Memory Architecture
-
-**Unified Memory Architecture** places CPU, GPU, and other processors on a single system-on-chip (SoC) sharing one memory pool. Apple's M-series and AMD's "Strix Halo" processors use this approach, achieving 500+ GB/s bandwidth by eliminating data copies between separate memory pools. Just as M-series chips eliminate PCIe bus overhead, eBPF eliminates the kernel→userspace copy for security events.
-
-### 3.2 Zero-Copy and Kernel Bypass
-
-**Zero-copy** techniques eliminate redundant data copies between system components. **Kernel bypass** allows user-space applications direct, safe access to hardware without kernel involvement in the critical path.
-
-eBPF's XDP (eXpress Data Path) exemplifies this: it processes packets at the network driver level, before the kernel network stack, avoiding copies and achieving line-rate packet handling.
+**Examples across computing:**
+- **Hardware:** Apple M-series Unified Memory eliminates PCIe overhead (500+ GB/s bandwidth)
+- **Gaming:** NTSYNC keeps thread sync in-kernel (778% FPS improvement in multi-threaded games)
+- **Security:** eBPF processes events at source, before copying to userspace
 
 **Relevance to Tetragon:** Tetragon embodies this principle by running security monitoring programs *inside the kernel* via eBPF. Instead of copying system events to user space for analysis, it processes them at their source—the kernel hooks where they occur. This minimizes latency and provides real-time visibility impossible with traditional audit approaches.
 
@@ -153,10 +146,21 @@ With the foundation established, we can now understand precisely how Tetragon us
 
 | Observability Target | eBPF Hook Type | Kernel Function/Event |
 |---------------------|----------------|----------------------|
-| Process execution | Tracepoint | `sys_enter_execve`, `sys_exit_execve` |
-| File access | Kprobe | `vfs_open`, `vfs_read`, `vfs_write` |
-| Network connections | Tracepoint | `tcp_connect`, `udp_sendmsg` |
-| DNS queries | Kprobe | `udp_recvmsg` with port 53 filtering |
+| Process execution | Tracepoint | `sys_enter_execve` |
+| File access | Kprobe | `vfs_read` |
+| Network connections | Tracepoint | `tcp_connect` |
+| DNS queries | Kprobe | `udp_recvmsg:53` |
+
+**Why these hooks?**
+- `sys_*` – system call entry/exit (high-level process activity)
+- `vfs_*` – virtual filesystem layer (file operations)
+- `tcp_*`, `udp_*` – network stack (connections and DNS)
+
+**In our Kubeflow cluster:**
+
+- **Jupyter notebook pods** – Detect shell escapes via `sys_execve` when `/bin/sh` or `/bin/bash` spawns from notebook process
+- **Training jobs** – Catch credential access via `vfs_read` on `/etc/shadow`, `/etc/passwd`, or `~/.kube/config`
+- **Inference endpoints** – Monitor external connections via `tcp_connect` to IPs outside cluster CIDR
 
 ### 4.3 Example TracingPolicy
 
@@ -217,66 +221,73 @@ This policy attaches to the `execve` system call, captures the command line argu
 
 ## 5.0 Deployment Plan
 
-Based on our research, here are the concrete steps for validation:
-
-### 5.1 Prerequisites
-
-- Access to Zone DEV cluster
-- `kubectl` configured
-- Helm 3 installed
-- Linux kernel ≥ 4.19 (for core eBPF features; 5.4+ recommended)
-- BTF (BPF Type Format) support enabled for CO-RE (Compile Once – Run Everywhere) compatibility
-
-**Kernel configuration check:**
+### 5.1 Installation
 
 ```bash
-# Check kernel version
-uname -r
-
-# Verify BTF support (required for best compatibility)
-ls /sys/kernel/btf/vmlinux
-
-# Check required kernel configs
-zgrep CONFIG_BPF_EVENTS /proc/config.gz
-zgrep CONFIG_DEBUG_INFO_BTF /proc/config.gz
-```
-
-**Note:** Some hooks (particularly LSM) require specific kernel configs that aren't universally enabled. Most modern distributions (RHEL 8+, Ubuntu 20.04+, Debian 11+) include these by default.
-
-### 5.2 Installation
-
-```bash
-# Add Tetragon Helm repository
+# 1. Add the Cilium Helm repository
 helm repo add cilium https://helm.cilium.io
 helm repo update
 
-# Create namespace
+# 2. Create namespace and install Tetragon
 kubectl create namespace tetragon
+helm install tetragon cilium/tetragon -n tetragon
 
-# Install with minimal configuration
-helm upgrade --install tetragon cilium/tetragon \
-  --namespace tetragon
-```
-
-### 5.3 Verification
-
-```bash
-# Check pods are running
+# 3. Verify installation
 kubectl -n tetragon get pods
-
-# View events
-kubectl -n tetragon logs -l app.kubernetes.io/name=tetragon
+# Should see tetragon-* DaemonSet pods running
 ```
 
-### 5.4 Test Policy Application
-
-Apply a simple policy and verify events:
+### 5.2 Deploy a TracingPolicy (Credential Access Detection)
 
 ```bash
-kubectl apply -f trace-exec.yaml
-kubectl run test --image=busybox -- ls
-kubectl -n tetragon logs -l app.kubernetes.io/name=tetragon | grep ls
+cat <<EOF | kubectl apply -f -
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: detect-credential-access
+spec:
+  kprobes:
+  - call: sys_execve
+    selectors:
+    - matchBinaries:
+        - operator: In
+          values: [/bin/bash, /bin/sh]
+      matchArgs:
+        - index: 0
+          operator: Contains
+          values: [passwd, shadow]
+EOF
 ```
+
+### 5.3 View Events in Real-Time
+
+```bash
+# Port-forward to Tetragon pod
+kubectl port-forward -n tetragon ds/tetragon 54321:54321
+
+# View events in compact format
+tetra getevents -o compact
+```
+
+### 5.4 Prerequisites
+
+- Linux kernel ≥ 4.19 (5.4+ recommended for full eBPF features)
+- Helm 3 installed
+- `kubectl` configured with cluster access
+- BTF (BPF Type Format) support for CO-RE compatibility
+
+### 5.5 Aurora Configuration
+
+Configuration validated in Aurora:
+
+- **Namespace:** `tetragon-system`
+- **Pod Security:** `privileged` (required for eBPF)
+- **Istio Injection:** Disabled
+- **Resource Quota:** 60 pods
+- **Agent:** DaemonSet (runs on every node)
+- **Operator:** Deployment (centralized control)
+- **Network Policies:** Same-namespace, API server CIDR, konnectivity-agent
+- **Status:** Experimental in Aurora
 
 ---
 
@@ -307,13 +318,25 @@ Tetragon represents not just a compliance checkbox but a fundamental improvement
 
 ## 8.0 References
 
-1. Tetragon Documentation. https://tetragon.cilium.io/docs/
-2. eBPF.io - Introduction to eBPF. https://ebpf.io/
-3. Starovoitov, A. (2014). "BPF: the universal in-kernel virtual machine." LWN.net.
-4. Rice, L. (2020). *What is eBPF?* O'Reilly Media.
-5. McCanne, S. & Jacobson, V. (1993). "The BSD Packet Filter." USENIX Winter 1993.
-6. Cilium Tetragon GitHub Repository. https://github.com/cilium/tetragon
+**Tetragon & eBPF:**
+
+1. Tetragon Documentation. https://tetragon.io/docs/
+2. Tetragon Installation Guide. https://tetragon.io/docs/installation/kubernetes/
+3. eBPF.io - Introduction to eBPF. https://ebpf.io/
+
+**Technical Resources:**
+
+4. Starovoitov, A. (2014). "BPF: the universal in-kernel virtual machine." LWN.net.
+5. Rice, L. (2020). *Learning eBPF*. O'Reilly Media.
+6. McCanne, S. & Jacobson, V. (1993). "The BSD Packet Filter." USENIX Winter 1993.
+
+**Linux Kernel:**
+
 7. Linux Kernel Source: `kernel/bpf/verifier.c`
+
+**Aurora Implementation:**
+
+8. Aurora Platform Charts. https://github.com/gccloudone-aurora/aurora-platform-charts
 
 ---
 
@@ -361,7 +384,9 @@ Tetragon represents not just a compliance checkbox but a fundamental improvement
 
 ## 1.0 Tetragon : La solution
 
-**Tetragon** est un outil d'observabilité de sécurité et d'application de règles en temps d'exécution, conscient de Kubernetes, qui utilise eBPF pour fournir une visibilité approfondie sur l'activité des processus, des fichiers et du réseau au niveau du noyau Linux. Il permet la détection en temps réel et la réponse aux menaces de sécurité avec un impact minimal sur les performances.
+**Tetragon** est un outil d'observabilité de sécurité et d'application d'exécution basées sur eBPF pour Kubernetes. Il applique des politiques et des filtres directement avec eBPF, permettant une surveillance réduite, le suivi de tout processus et l'application de politiques en temps réel.
+
+En savoir plus : [tetragon.io](https://tetragon.io/)
 
 Considérez Tetragon comme un système de caméras de sécurité pour vos conteneurs—mais qui ne surveille pas seulement les portes et fenêtres (ports réseau). Il surveille chaque action de chaque processus : chaque fichier qu'il ouvre, chaque commande qu'il exécute, chaque connexion réseau qu'il établit. Et parce qu'il opère dans le noyau, il voit ces choses au moment où elles se produisent, pas après qu'elles ont été signalées à travers plusieurs couches de logiciels.
 
@@ -436,23 +461,14 @@ Les garanties du vérificateur rendent eBPF suffisamment sûr pour s'exécuter d
 
 ## 3.0 Le principe de proximité
 
-Les systèmes informatiques modernes font face à un défi fondamental : déplacer des données entre les composants (CPU, mémoire, stockage, réseau) prend souvent plus de temps et d'énergie que le calcul réel. C'est le **goulot d'étranglement du mouvement des données**.
+**Déplacer le calcul vers les données.**
 
-**Principe de proximité :** La latence et la consommation d'énergie sont minimisées lorsque le calcul est effectué aussi près que possible de l'endroit où les données résident.
+Les systèmes informatiques modernes font face à un défi fondamental : déplacer des données entre les composants coûte souvent plus que le calcul réel. Le principe de proximité stipule que la latence est minimisée lorsque le calcul se produit aussi près que possible de l'endroit où les données résident.
 
-Les données traversent des interfaces avec une latence croissante : caches sur puce → mémoire principale → stockage → réseau. Co-localiser le calcul avec les données réduit ou élimine ces étapes de mouvement.
-
-Ce principe apparaît dans plusieurs domaines de la conception des systèmes :
-
-### 3.1 Architecture mémoire unifiée
-
-**Architecture mémoire unifiée** place le CPU, le GPU et d'autres processeurs sur un seul système-sur-puce (SoC) partageant un pool de mémoire unique. Les processeurs M-series d'Apple et "Strix Halo" d'AMD utilisent cette approche, atteignant plus de 500 Go/s de bande passante en éliminant les copies de données entre les pools de mémoire séparés. Tout comme les puces M-series éliminent la surcharge du bus PCIe, eBPF élimine la copie noyau→espace utilisateur pour les événements de sécurité.
-
-### 3.2 Zéro copie et contournement du noyau
-
-Les techniques **zéro copie** éliminent les copies redondantes de données entre les composants du système. Le **contournement du noyau** permet aux applications utilisateur un accès direct et sûr aux ressources matérielles sans implication du noyau dans le chemin critique.
-
-Le XDP (eXpress Data Path) d'eBPF en est l'exemple : il traite les paquets au niveau du pilote réseau, avant la pile réseau du noyau, évitant les copies et atteignant un traitement des paquets à débit linéaire.
+**Exemples dans l'informatique :**
+- **Matériel :** Mémoire unifiée Apple M-series élimine la surcharge PCIe (500+ Go/s de bande passante)
+- **Jeux :** NTSYNC garde la synchronisation dans le noyau (778 % d'amélioration FPS)
+- **Sécurité :** eBPF traite les événements à la source, avant copie vers l'espace utilisateur
 
 **Pertinence pour Tetragon :** Tetragon incarne ce principe en exécutant des programmes de surveillance de sécurité *à l'intérieur du noyau* via eBPF. Au lieu de copier les événements système vers l'espace utilisateur pour analyse, il les traite à leur source—les points d'attache du noyau où ils se produisent. Cela minimise la latence et fournit une visibilité en temps réel impossible avec les approches d'audit traditionnelles.
 
@@ -472,10 +488,21 @@ Avec la base établie, nous pouvons maintenant comprendre précisément comment 
 
 | Cible d'observabilité | Type de point d'attache eBPF | Fonction/Événement du noyau |
 |---------------------|----------------|----------------------|
-| Exécution de processus | Tracepoint | `sys_enter_execve`, `sys_exit_execve` |
-| Accès aux fichiers | Kprobe | `vfs_open`, `vfs_read`, `vfs_write` |
-| Connexions réseau | Tracepoint | `tcp_connect`, `udp_sendmsg` |
-| Requêtes DNS | Kprobe | `udp_recvmsg` avec filtrage port 53 |
+| Exécution de processus | Tracepoint | `sys_enter_execve` |
+| Accès aux fichiers | Kprobe | `vfs_read` |
+| Connexions réseau | Tracepoint | `tcp_connect` |
+| Requêtes DNS | Kprobe | `udp_recvmsg:53` |
+
+**Pourquoi ces hooks ?**
+- `sys_*` – entrée/sortie des appels système (activité de processus de haut niveau)
+- `vfs_*` – couche de système de fichiers virtuel (opérations sur les fichiers)
+- `tcp_*`, `udp_*` – pile réseau (connexions et DNS)
+
+**Dans notre grappe Kubeflow :**
+
+- **Pods Jupyter notebook** – Détecter les échappements de shell via `sys_execve` quand `/bin/sh` ou `/bin/bash` est lancé depuis le processus notebook
+- **Tâches d'entraînement** – Capturer l'accès aux identifiants via `vfs_read` sur `/etc/shadow`, `/etc/passwd` ou `~/.kube/config`
+- **Points de terminaison d'inférence** – Surveiller les connexions externes via `tcp_connect` vers des IPs hors CIDR de la grappe
 
 ### 4.3 Exemple de TracingPolicy
 
@@ -536,66 +563,73 @@ Cette politique s'attache à l'appel système `execve`, capture l'argument de li
 
 ## 5.0 Plan de déploiement
 
-Sur la base de notre recherche, voici les étapes concrètes pour la validation :
-
-### 5.1 Prérequis
-
-- Accès à la grappe DEV de la Zone
-- `kubectl` configuré
-- Helm 3 installé
-- Noyau Linux ≥ 4.19 (pour les fonctionnalités eBPF de base ; 5.4+ recommandé)
-- Support BTF (BPF Type Format) activé pour la compatibilité CO-RE (Compile Once – Run Everywhere)
-
-**Vérification de la configuration du noyau :**
+### 5.1 Installation
 
 ```bash
-# Vérifier la version du noyau
-uname -r
-
-# Vérifier le support BTF (requis pour une meilleure compatibilité)
-ls /sys/kernel/btf/vmlinux
-
-# Vérifier les configurations requises du noyau
-zgrep CONFIG_BPF_EVENTS /proc/config.gz
-zgrep CONFIG_DEBUG_INFO_BTF /proc/config.gz
-```
-
-**Note :** Certains hooks (particulièrement LSM) nécessitent des configurations spécifiques du noyau qui ne sont pas universellement activées. La plupart des distributions modernes (RHEL 8+, Ubuntu 20.04+, Debian 11+) les incluent par défaut.
-
-### 5.2 Installation
-
-```bash
-# Ajouter le dépôt Helm Tetragon
+# 1. Ajouter le dépôt Helm Cilium
 helm repo add cilium https://helm.cilium.io
 helm repo update
 
-# Créer le namespace
+# 2. Créer le namespace et installer Tetragon
 kubectl create namespace tetragon
+helm install tetragon cilium/tetragon -n tetragon
 
-# Installer avec configuration minimale
-helm upgrade --install tetragon cilium/tetragon \
-  --namespace tetragon
-```
-
-### 5.3 Vérification
-
-```bash
-# Vérifier que les pods sont en cours d'exécution
+# 3. Vérifier l'installation
 kubectl -n tetragon get pods
-
-# Voir les événements
-kubectl -n tetragon logs -l app.kubernetes.io/name=tetragon
+# Devrait voir les pods DaemonSet tetragon-* en cours d'exécution
 ```
 
-### 5.4 Test d'application de politique
-
-Appliquer une politique simple et vérifier les événements :
+### 5.2 Déployer une TracingPolicy (Détection d'accès aux identifiants)
 
 ```bash
-kubectl apply -f trace-exec.yaml
-kubectl run test --image=busybox -- ls
-kubectl -n tetragon logs -l app.kubernetes.io/name=tetragon | grep ls
+cat <<EOF | kubectl apply -f -
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: detect-credential-access
+spec:
+  kprobes:
+  - call: sys_execve
+    selectors:
+    - matchBinaries:
+        - operator: In
+          values: [/bin/bash, /bin/sh]
+      matchArgs:
+        - index: 0
+          operator: Contains
+          values: [passwd, shadow]
+EOF
 ```
+
+### 5.3 Voir les événements en temps réel
+
+```bash
+# Port-forward vers un pod Tetragon
+kubectl port-forward -n tetragon ds/tetragon 54321:54321
+
+# Voir les événements en format compact
+tetra getevents -o compact
+```
+
+### 5.4 Prérequis
+
+- Noyau Linux ≥ 4.19 (5.4+ recommandé pour les fonctionnalités eBPF complètes)
+- Helm 3 installé
+- `kubectl` configuré avec accès à la grappe
+- Support BTF (BPF Type Format) pour la compatibilité CO-RE
+
+### 5.5 Configuration Aurora
+
+Configuration validée dans Aurora :
+
+- **Namespace :** `tetragon-system`
+- **Sécurité des pods :** `privileged` (requis pour eBPF)
+- **Injection Istio :** Désactivée
+- **Quota de ressources :** 60 pods
+- **Agent :** DaemonSet (s'exécute sur chaque nœud)
+- **Opérateur :** Deployment (contrôle centralisé)
+- **Politiques réseau :** Même namespace, CIDR API server, konnectivity-agent
+- **Statut :** Expérimental dans Aurora
 
 ---
 
@@ -626,10 +660,22 @@ Tetragon représente non seulement une case de conformité à cocher, mais une a
 
 ## 8.0 Références
 
-1. Documentation Tetragon. https://tetragon.cilium.io/docs/
-2. eBPF.io - Introduction à eBPF. https://ebpf.io/
-3. Starovoitov, A. (2014). "BPF: the universal in-kernel virtual machine." LWN.net.
-4. Rice, L. (2020). *What is eBPF?* O'Reilly Media.
-5. McCanne, S. & Jacobson, V. (1993). "The BSD Packet Filter." USENIX Winter 1993.
-6. Dépôt GitHub Cilium Tetragon. https://github.com/cilium/tetragon
+**Tetragon et eBPF :**
+
+1. Documentation Tetragon. https://tetragon.io/docs/
+2. Guide d'installation Tetragon. https://tetragon.io/docs/installation/kubernetes/
+3. eBPF.io - Introduction à eBPF. https://ebpf.io/
+
+**Ressources techniques :**
+
+4. Starovoitov, A. (2014). "BPF: the universal in-kernel virtual machine." LWN.net.
+5. Rice, L. (2020). *Learning eBPF*. O'Reilly Media.
+6. McCanne, S. & Jacobson, V. (1993). "The BSD Packet Filter." USENIX Winter 1993.
+
+**Noyau Linux :**
+
 7. Source du noyau Linux : `kernel/bpf/verifier.c`
+
+**Implémentation Aurora :**
+
+8. Aurora Platform Charts. https://github.com/gccloudone-aurora/aurora-platform-charts

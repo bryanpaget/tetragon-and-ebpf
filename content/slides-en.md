@@ -93,25 +93,15 @@ Move computation to data, not data to computation.
 
 ![bg left:20%](./img/canada-1.png)
 
-**Data Movement Bottleneck:** Moving data between components often costs more than computation.
+**Move computation to where data resides.**
 
-**Principle:** Latency minimized when computation occurs **as close as possible to where data resides**.
-
-Data traverses: on‑chip caches → main memory → storage → network
-
----
-
-## The Principle of Proximity (cont.)
-
-![bg left:20%](./img/canada-1.png)
-
-**Manifestations across computing:**
-- **Hardware:** Unified Memory (Apple M-series) eliminates PCIe overhead
-- **Gaming:** NTSYNC keeps thread synchronization in‑kernel
-- **Security:** eBPF processes events at their source, before copying to userspace
+**Examples:**
+- **Hardware:** Apple M-series Unified Memory eliminates PCIe overhead
+- **Gaming:** NTSYNC keeps thread sync in-kernel (778% FPS boost)
+- **Security:** eBPF processes events at source, before copying to userspace
 
 <blockquote>
-A fundamental optimization principle across all computing.
+A fundamental optimization across all computing.
 </blockquote>
 
 ---
@@ -121,13 +111,13 @@ A fundamental optimization principle across all computing.
 
 ![bg left:20%](./img/canada-1.png)
 
-**Tetragon:** Security observability platform that uses eBPF to monitor Kubernetes clusters from the kernel up.
+**eBPF-based Security Observability and Runtime Enforcement**
 
-**What it monitors:**
-- Process execution and signals
-- File system operations
-- Network connections and DNS queries
-- All done in kernel space, limiting overhead and latency – real‑time monitoring for security and bugs
+Tetragon is a flexible Kubernetes-aware security observability and runtime enforcement tool that applies policy and filtering directly with eBPF, allowing for reduced observation overhead, tracking of any process, and real-time enforcement of policies.
+
+![w:120px](https://tetragon.io/images/home/hero-illustration.png)
+
+**Learn more:** <a href="https://tetragon.io/">tetragon.io</a>
 
 ---
 
@@ -234,22 +224,29 @@ Provably safe code in the kernel – verified before loading.
 
 ![bg left:20%](./img/canada-1.png)
 
-| What we monitor | Kernel function | Hook type |
-|-----------------|-----------------|-----------|
-| Process starts | `sys_enter_execve` | Tracepoint |
-| File reads | `vfs_read` | Kprobe |
-| TCP connections | `tcp_connect` | Tracepoint |
-| DNS queries | `udp_recvmsg:53` | Kprobe |
+**What we monitor:**
+
+- **Process starts:** `sys_enter_execve` (Tracepoint)
+- **File reads:** `vfs_read` (Kprobe)
+- **TCP connections:** `tcp_connect` (Tracepoint)
+- **DNS queries:** `udp_recvmsg:53` (Kprobe)
 
 **Why these hooks?**
 - `sys_*` – system call entry/exit (high‑level process activity)
 - `vfs_*` – virtual filesystem layer (file operations)
 - `tcp_*`, `udp_*` – network stack (connections and DNS)
 
-**In our Kubeflow cluster:** These hooks give us visibility into:
-- Jupyter notebook pods – monitor shell escapes
-- Training jobs – detect unusual file access
-- Inference endpoints – observe network connections
+---
+
+## How Tetragon Uses eBPF Hooks (cont.)
+
+![bg left:20%](./img/canada-1.png)
+
+**In our Kubeflow cluster:**
+
+- **Jupyter notebook pods** – Detect shell escapes via `sys_execve` when `/bin/sh` or `/bin/bash` spawns from notebook process
+- **Training jobs** – Catch credential access via `vfs_read` on `/etc/shadow`, `/etc/passwd`, or `~/.kube/config`
+- **Inference endpoints** – Monitor external connections via `tcp_connect` to IPs outside cluster CIDR
 
 <blockquote>
 Deep visibility into system activity – from container to kernel.
@@ -262,7 +259,7 @@ Deep visibility into system activity – from container to kernel.
 
 ![bg left:20%](./img/canada-1.png)
 
-**Policy:** Alert when bash executes commands containing `passwd` or `shadow`
+**Policy:** Alert when bash executes `passwd` or `shadow`
 
 ```yaml
 kind: TracingPolicy
@@ -287,58 +284,55 @@ spec:
 ---
 
 <!-- Deployment Plan -->
-## Deployment Plan
+## Deployment Plan / Installation (1/2)
 
 ![bg left:20%](./img/canada-1.png)
 
-**Prerequisites:**
-- AKS cluster with Linux nodes (Ubuntu 20.04+ recommended)
-- Kubeflow installed (optional, but we'll monitor Kubeflow components)
-- `helm` and `kubectl` access
-
-**Installation steps:**
-
-1. **Add the Cilium Helm repository**
    ```bash
+   # 1. Add the Cilium Helm repository:
    helm repo add cilium https://helm.cilium.io
    helm repo update
-   ```
 
-2. **Create namespace and install Tetragon**
-   ```bash
+   # 2. Create namespace and install Tetragon:
    kubectl create namespace tetragon
    helm install tetragon cilium/tetragon -n tetragon
-   ```
 
-3. **Verify installation**
-   ```bash
+   # 3. Verify installation:
    kubectl -n tetragon get pods
    # Should see tetragon-* DaemonSet pods running
    ```
 
-4. **Deploy a TracingPolicy** (e.g., the credential access example)
-
 ---
 
-<!-- Aurora Deployment Configuration -->
-## Aurora Deployment Configuration
+<!-- Deployment Plan -->
+## Deployment Plan / Installation (2/2)
 
 ![bg left:20%](./img/canada-1.png)
 
-| Setting | Value |
-|---------|-------|
-| Namespace | `tetragon-system` |
-| Pod Security | `privileged` (required for eBPF) |
-| Istio Injection | `disabled` |
-| Resource Quota | 60 pods |
-| Agent | DaemonSet |
-| Operator | Deployment |
-| Network Policies | same‑namespace, API server CIDR, konnectivity‑agent |
-| Status | Experimental in Aurora |
+   ```bash
+   # 4. Deploy a TracingPolicy (credential access detection):
+   cat <<EOF | kubectl apply -f -
+   apiVersion: cilium.io/v1alpha1
+   kind: TracingPolicy
+   metadata:
+     name: detect-credential-access
+   spec:
+     kprobes:
+     - call: sys_execve
+       selectors:
+       - matchBinaries:
+           - operator: In
+             values: [/bin/bash, /bin/sh]
+         matchArgs:
+           - index: 0
+             operator: Contains
+             values: [passwd, shadow]
+   EOF
 
-<blockquote>
-Production‑ready configuration validated in Aurora.
-</blockquote>
+   # 5. View events in real-time:
+   kubectl port-forward -n tetragon ds/tetragon 54321:54321
+   tetra getevents -o compact
+   ```
 
 ---
 
@@ -346,8 +340,6 @@ Production‑ready configuration validated in Aurora.
 ## Next Steps and Open Questions
 
 ![bg left:20%](./img/canada-1.png)
-
-**Immediate Actions:**
 
 1. **Chart Porting:** Add Tetragon to `cloudnative-platform-charts`
 2. **DEV Deployment:** Deploy to Zone DEV (AKS) with:
@@ -411,10 +403,10 @@ Production‑ready configuration validated in Aurora.
 **Immediate Next Step:** Deploy Tetragon in Zone DEV this sprint.
 
 ---
-
-<!-- References -->
 <!-- _class: references -->
 ## References
+
+![bg left:20%](./img/canada-1.png)
 
 **Tetragon & eBPF:**
 
@@ -427,6 +419,15 @@ Production‑ready configuration validated in Aurora.
 4. Starovoitov, A. (2014). <a href="https://lwn.net/Articles/599755/">"BPF: the universal in‑kernel virtual machine."</a> LWN.net.
 5. Rice, L. (2020). <a href="https://www.oreilly.com/library/view/learning-ebpf/9781098135119/ch01.html"><i>Learning eBPF</i></a>. O'Reilly Media.
 6. McCanne, S. & Jacobson, V. (1993). <a href="https://www.tcpdump.org/papers/bpf-usenix93.pdf">"The BSD Packet Filter."</a> USENIX.
+
+---
+<!-- _class: references -->
+## References (continued)
+
+![bg left:20%](./img/canada-1.png)
+
+**Linux Kernel:**
+
 7. Linux Kernel Source: <a href="https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c"><code>kernel/bpf/verifier.c</code></a>
 
 **Aurora Implementation:**

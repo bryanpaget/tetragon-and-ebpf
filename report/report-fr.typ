@@ -82,7 +82,13 @@ Cela démontre le *Principe de Proximité* : déplacer le calcul vers l'endroit 
 
 == Aperçu de la plateforme
 
-Tetragon est une plateforme d'observabilité de sécurité par Cilium (Isovalent) utilisant eBPF pour surveiller Kubernetes depuis le noyau. Il surveille :
+[*Observabilité de sécurité et application d'exécution basées sur eBPF*]
+
+Tetragon est un outil flexible d'observabilité de sécurité et d'application d'exécution pour Kubernetes qui applique des politiques et des filtres directement avec eBPF, permettant une surveillance réduite, le suivi de tout processus et l'application de politiques en temps réel.
+
+En savoir plus : https://tetragon.io/
+
+Il surveille :
 
 #list(
   [
@@ -219,7 +225,33 @@ kubectl port-forward -n kube-system ds/tetragon 54321:54321
 tetra getevents -o compact
 ```
 
-Pour des configurations avancées, appliquez des TracingPolicies (Custom Resource Definitions) pour surveiller des namespaces spécifiques ou appliquer des politiques.
+== Exemple : Déployer une TracingPolicy
+
+Déployez une politique pour détecter les tentatives d'accès aux identifiants :
+
+```bash
+cat <<EOF | kubectl apply -f -
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: detect-credential-access
+spec:
+  kprobes:
+  - call: sys_execve
+    selectors:
+    - matchBinaries:
+        - operator: In
+          values: [/bin/bash, /bin/sh]
+      matchArgs:
+        - index: 0
+          operator: Contains
+          values: [passwd, shadow]
+EOF
+```
+
+Cette politique détecte lorsque bash exécute des commandes contenant `passwd` ou `shadow` (accès potentiel aux identifiants).
+
+Pour des configurations avancées, appliquez des TracingPolicies supplémentaires pour surveiller des namespaces spécifiques ou appliquer des politiques.
 
 == Considérations Azure AKS
 

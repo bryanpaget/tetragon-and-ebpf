@@ -93,25 +93,15 @@ Déplacer le calcul vers les données, pas les données vers le calcul.
 
 ![bg left:20%](./img/canada-1.png)
 
-**Goulot d'étranglement du mouvement des données :** Déplacer des données entre les composants coûte souvent plus que le calcul.
+**Déplacer le calcul vers les données.**
 
-**Principe :** La latence est minimisée lorsque le calcul se produit **aussi près que possible de l'endroit où les données résident**.
-
-Les données traversent : caches sur puce → mémoire principale → stockage → réseau
-
----
-
-## Le principe de proximité (suite)
-
-![bg left:20%](./img/canada-1.png)
-
-**Manifestations dans l'informatique :**
-- **Matériel :** Mémoire unifiée (Apple M-series) élimine la surcharge PCIe
-- **Jeux :** NTSYNC garde la synchronisation des threads dans le noyau
-- **Sécurité :** eBPF traite les événements à leur source, avant la copie vers l'espace utilisateur
+**Exemples :**
+- **Matériel :** Mémoire unifiée Apple M-series élimine la surcharge PCIe
+- **Jeux :** NTSYNC garde la synchronisation dans le noyau (778 % FPS)
+- **Sécurité :** eBPF traite les événements à la source, avant copie
 
 <blockquote>
-Un principe d'optimisation fondamental dans toute l'informatique.
+Une optimisation fondamentale dans toute l'informatique.
 </blockquote>
 
 ---
@@ -121,13 +111,13 @@ Un principe d'optimisation fondamental dans toute l'informatique.
 
 ![bg left:20%](./img/canada-1.png)
 
-**Tetragon :** Plateforme d'observabilité de sécurité qui utilise eBPF pour surveiller les grappes Kubernetes depuis le noyau.
+**Observabilité de sécurité et application d'exécution basées sur eBPF**
 
-**Ce qu'il surveille :**
-- Exécution des processus et signaux
-- Opérations sur le système de fichiers
-- Connexions réseau et requêtes DNS
-- Tout fait dans l'espace noyau, limitant l'impact et la latence – surveillance en temps réel pour la sécurité et les bogues
+Tetragon est un outil flexible d'observabilité de sécurité et d'application d'exécution pour Kubernetes qui applique des politiques et des filtres directement avec eBPF, permettant une surveillance réduite, le suivi de tout processus et l'application de politiques en temps réel.
+
+![w:120px](https://tetragon.io/images/home/hero-illustration.png)
+
+**En savoir plus :** <a href="https://tetragon.io/">tetragon.io</a>
 
 ---
 
@@ -234,22 +224,29 @@ Code prouvé sûr dans le noyau – vérifié avant le chargement.
 
 ![bg left:20%](./img/canada-1.png)
 
-| Ce qu'on surveille | Fonction noyau | Type de hook |
-|-------------------|----------------|--------------|
-| Démarrage processus | `sys_enter_execve` | Tracepoint |
-| Lecture fichiers | `vfs_read` | Kprobe |
-| Connexions TCP | `tcp_connect` | Tracepoint |
-| Requêtes DNS | `udp_recvmsg:53` | Kprobe |
+**Ce qu'on surveille :**
+
+- **Démarrage processus :** `sys_enter_execve` (Tracepoint)
+- **Lecture fichiers :** `vfs_read` (Kprobe)
+- **Connexions TCP :** `tcp_connect` (Tracepoint)
+- **Requêtes DNS :** `udp_recvmsg:53` (Kprobe)
 
 **Pourquoi ces hooks ?**
 - `sys_*` – entrée/sortie des appels système (activité de processus de haut niveau)
 - `vfs_*` – couche de système de fichiers virtuel (opérations sur les fichiers)
 - `tcp_*`, `udp_*` – pile réseau (connexions et DNS)
 
-**Dans notre grappe Kubeflow :** Ces hooks nous donnent de la visibilité sur :
-- Pods Jupyter notebook – surveillent les échappements de shell
-- Tâches d'entraînement – détectent l'accès inhabituel aux fichiers
-- Points de terminaison d'inférence – observent les connexions réseau
+---
+
+## Comment Tetragon utilise les points d'attache eBPF (suite)
+
+![bg left:20%](./img/canada-1.png)
+
+**Dans notre grappe Kubeflow :**
+
+- **Pods Jupyter notebook** – Détecter les échappements de shell via `sys_execve` quand `/bin/sh` ou `/bin/bash` est lancé depuis le processus notebook
+- **Tâches d'entraînement** – Capturer l'accès aux identifiants via `vfs_read` sur `/etc/shadow`, `/etc/passwd` ou `~/.kube/config`
+- **Points de terminaison d'inférence** – Surveiller les connexions externes via `tcp_connect` vers des IPs hors CIDR de la grappe
 
 <blockquote>
 Visibilité approfondie sur l'activité du système – du conteneur au noyau.
@@ -287,36 +284,55 @@ spec:
 ---
 
 <!-- Plan de déploiement -->
-## Plan de déploiement
+## Plan de déploiement / Installation (1/2)
 
 ![bg left:20%](./img/canada-1.png)
 
-**Prérequis :**
-- Grappe AKS avec nœuds Linux (Ubuntu 20.04+ recommandé)
-- Kubeflow installé (optionnel, mais nous surveillerons les composants Kubeflow)
-- Accès `helm` et `kubectl`
-
-**Étapes d'installation :**
-
-1. **Ajouter le dépôt Helm Cilium**
    ```bash
+   # 1. Ajouter le dépôt Helm Cilium :
    helm repo add cilium https://helm.cilium.io
    helm repo update
-   ```
 
-2. **Créer le namespace et installer Tetragon**
-   ```bash
+   # 2. Créer le namespace et installer Tetragon :
    kubectl create namespace tetragon
    helm install tetragon cilium/tetragon -n tetragon
-   ```
 
-3. **Vérifier l'installation**
-   ```bash
+   # 3. Vérifier l'installation :
    kubectl -n tetragon get pods
    # Devrait voir les pods DaemonSet tetragon-* en cours d'exécution
    ```
 
-4. **Déployer une TracingPolicy** (p. ex. l'exemple d'accès aux identifiants)
+---
+
+<!-- Plan de déploiement -->
+## Plan de déploiement / Installation (2/2)
+
+![bg left:20%](./img/canada-1.png)
+
+   ```bash
+   # 4. Déployer une TracingPolicy (détection accès identifiants) :
+   cat <<EOF | kubectl apply -f -
+   apiVersion: cilium.io/v1alpha1
+   kind: TracingPolicy
+   metadata:
+     name: detect-credential-access
+   spec:
+     kprobes:
+     - call: sys_execve
+       selectors:
+       - matchBinaries:
+           - operator: In
+             values: [/bin/bash, /bin/sh]
+         matchArgs:
+           - index: 0
+             operator: Contains
+             values: [passwd, shadow]
+   EOF
+
+   # 5. Voir les événements en temps réel :
+   kubectl port-forward -n tetragon ds/tetragon 54321:54321
+   tetra getevents -o compact
+   ```
 
 ---
 
@@ -325,16 +341,16 @@ spec:
 
 ![bg left:20%](./img/canada-1.png)
 
-| Paramètre | Valeur |
-|-----------|--------|
-| Namespace | `tetragon-system` |
-| Sécurité des pods | `privileged` (requis pour eBPF) |
-| Injection Istio | `désactivée` |
-| Quota de ressources | 60 pods |
-| Agent | DaemonSet |
-| Opérateur | Deployment |
-| Politiques réseau | même namespace, CIDR API server, konnectivity-agent |
-| Statut | Expérimental dans Aurora |
+**Configuration validée dans Aurora :**
+
+- **Namespace :** `tetragon-system`
+- **Sécurité des pods :** `privileged` (requis pour eBPF)
+- **Injection Istio :** Désactivée
+- **Quota de ressources :** 60 pods
+- **Agent :** DaemonSet (s'exécute sur chaque nœud)
+- **Opérateur :** Deployment (contrôle centralisé)
+- **Politiques réseau :** Même namespace, CIDR API server, konnectivity-agent
+- **Statut :** Expérimental dans Aurora
 
 <blockquote>
 Configuration prête pour la production validée dans Aurora.
@@ -411,10 +427,10 @@ Configuration prête pour la production validée dans Aurora.
 **Prochaine étape immédiate :** Déployer Tetragon dans Zone DEV ce sprint.
 
 ---
-
-<!-- Références -->
 <!-- _class: references -->
 ## Références
+
+![bg left:20%](./img/canada-1.png)
 
 **Tetragon et eBPF :**
 
@@ -427,6 +443,15 @@ Configuration prête pour la production validée dans Aurora.
 4. Starovoitov, A. (2014). <a href="https://lwn.net/Articles/599755/">"BPF: the universal in-kernel virtual machine."</a> LWN.net.
 5. Rice, L. (2020). <a href="https://www.oreilly.com/library/view/learning-ebpf/9781098135119/ch01.html"><i>Learning eBPF</i></a>. O'Reilly Media.
 6. McCanne, S. & Jacobson, V. (1993). <a href="https://www.tcpdump.org/papers/bpf-usenix93.pdf">"The BSD Packet Filter."</a> USENIX.
+
+---
+<!-- _class: references -->
+## Références (suite)
+
+![bg left:20%](./img/canada-1.png)
+
+**Noyau Linux :**
+
 7. Source du noyau Linux : <a href="https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c"><code>kernel/bpf/verifier.c</code></a>
 
 **Implémentation Aurora :**
