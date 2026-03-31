@@ -14,7 +14,7 @@
   ),
   titulo: [Tetragon and eBPF],
   resumen: [
-    We recommend adopting *Tetragon* as the primary security observability platform for Statistics Canada's Kubernetes infrastructure. Tetragon is already running experimentally in Aurora clusters (SSC's managed Kubernetes service). The risk profile is low: the eBPF verifier mathematically guarantees program safety, and resource consumption is minimal (CPU #sym.lt 1%, memory ~100-200 MiB per node). This report provides technical details, deployment strategy, and a six-week implementation roadmap.
+    We recommend adopting *Tetragon* as the primary security observability platform for Statistics Canada's Kubernetes infrastructure. Tetragon is already running in Aurora clusters (SSC's managed Kubernetes service). The risk profile is low: the eBPF verifier mathematically guarantees program safety, and resource consumption is minimal (CPU #sym.lt 1%, memory ~100-200 MiB per node). This report provides technical details, deployment strategy, and a six-week implementation roadmap.
   ],
   fecha: "2026-03-30",
   formato: (
@@ -31,7 +31,7 @@ Adopt *Tetragon* as the primary security observability platform for Statistics C
 
 == Context
 
-Tetragon is already running experimentally in Aurora clusters (SSC's managed Kubernetes service). Rather than waiting for the Aurora team's timeline, Statistics Canada can accelerate adoption by validating Tetragon independently in Zone DEV using our AKS cluster with Kubeflow workloads.
+Tetragon is already running in Aurora clusters (SSC's managed Kubernetes service). Rather than waiting for the Aurora team's timeline, Statistics Canada can accelerate adoption by validating Tetragon independently in Zone DEV using our AKS cluster with Kubeflow workloads.
 
 == Risk and Cost
 
@@ -286,8 +286,8 @@ tetra getevents --namespace default \
 
 === TracingPolicies as Code
 
-- YAML configuration, versioned in **Git**
-- Deployed via **ArgoCD** (GitOps)
+- YAML configuration, versioned in Git
+- Deployed via ArgoCD (GitOps)
 - Enables version control, auditing, and rollback
 
 Example policy:
@@ -311,8 +311,8 @@ spec:
 
 === Event Export & Dashboards
 
-- **Elasticsearch:** Store all Tetragon events
-- **Grafana:** Build custom dashboards using Elasticsearch data source
+- Elasticsearch: Store all Tetragon events
+- Grafana: Build custom dashboards using Elasticsearch data source
   - Visualize process executions, network flows, and security events
   - Alert on suspicious activity
 
@@ -372,48 +372,56 @@ Events follow this lifecycle:
 
 == Building Maintainable Policies
 
-**Version Control:**
+Version Control:
 Store TracingPolicies in Git, review via pull requests, tag releases with chart versions.
 
-**CI/CD Pipeline:**
+CI/CD Pipeline:
 Validate YAML syntax, deploy to DEV, run smoke tests, promote to production.
 
-**Policy Documentation:**
+Policy Documentation:
 Each policy should document: what it detects, known false positives, appropriate response, and ownership.
 
-**Lifecycle Management:**
+Lifecycle Management:
 Review policies quarterly, remove unused policies, update based on new threat intelligence.
 
 == Avoiding False Positives
 
-**Start in Audit Mode:**
+Start in Audit Mode:
 Deploy policies without enforcement. Baseline normal behavior for 1-2 weeks. Tune based on observed events.
 
-**Be Specific:**
+Be Specific:
 Use exact binary paths (`/usr/bin/python3`) not patterns (`*python*`).
 
-**Namespace-Specific Policies:**
+Namespace-Specific Policies:
 Different baselines for different workloads. Jupyter namespace ≠ training namespace ≠ inference.
 
-**Iterative Refinement:**
+Iterative Refinement:
 Deploy → observe → identify false positives → refine → repeat until acceptable signal-to-noise ratio.
 
 == What We Monitor: Use Cases
 
-**Credential Access Detection:**
-Files: `/etc/shadow`, `/etc/passwd`, `~/.kube/config`. Commands: `passwd`, `ssh-keygen`, `kubectl config`. Prevents credential theft and lateral movement.
-
-**Shell Escape Prevention:**
-Detect `/bin/sh`, `/bin/bash` spawned from notebook processes. Context: Jupyter pods, training jobs. Prevents container breakout attempts.
-
-**Data Exfiltration:**
-Connections to IPs outside cluster CIDR, large outbound data transfers. Detects data theft, crypto mining.
-
-**Privilege Escalation:**
-`setuid`, `setgid`, `capset` system calls, unexpected root access. Prevents privilege escalation attacks.
-
-**Sensitive File Access:**
-Secrets, tokens, certificates, `/var/run/secrets/kubernetes.io`. Protects service account tokens.
+#list(
+  [
+    #strong[Credential Access Detection:]
+    Files: `/etc/shadow`, `/etc/passwd`, `~/.kube/config`. Commands: `passwd`, `ssh-keygen`, `kubectl config`. Prevents credential theft and lateral movement.
+  ],
+  [
+    #strong[Shell Escape Prevention:]
+    Detect `/bin/sh`, `/bin/bash` spawned from notebook processes. Context: Jupyter pods, training jobs. Prevents container breakout attempts.
+  ],
+  [
+    #strong[Data Exfiltration:]
+    Connections to IPs outside cluster CIDR, large outbound data transfers. Detects data theft, crypto mining.
+  ],
+  [
+    #strong[Privilege Escalation:]
+    `setuid`, `setgid`, `capset` system calls, unexpected root access. Prevents privilege escalation attacks.
+  ],
+  [
+    #strong[Sensitive File Access:]
+    Secrets, tokens, certificates, `/var/run/secrets/kubernetes.io`. Protects service account tokens.
+  ],
+)
 
 = Implementation Roadmap
 

@@ -17,15 +17,6 @@
 
 ---
 
-<!-- Tetragon Architecture -->
-<!-- _class: lead -->
-
-## Tetragon Architectural Diagram
-
-![](https://tetragon.io/svgs/diagram-illustration.svg)
-
----
-
 <!-- Executive Summary -->
 ## Executive Summary
 
@@ -42,39 +33,6 @@ From research to production-ready deployment.
 
 ---
 
-<!-- Motivation: Why Kernel Space? -->
-## Why Kernel Space Matters
-
-**The Problem:** Userspace security tools pay a hidden tax on every event.
-
-![bg left:20%](./img/canada-1.png)
-
-**Why userspace is slower:**
-1. **Context switches:** CPU must save/restore state crossing kernel-user boundary
-2. **Data copying:** Event data copied from kernel memory to userspace buffers
-3. **Latency:** By the time userspace sees the event, the moment has passed
-
-
----
-
-<!-- Motivation: Why Kernel Space? -->
-## Why Kernel Space Matters (cont.)
-
-**The Principle of Proximity:** Move computation to where data resides.
-
-![bg left:20%](./img/canada-1.png)
-
-**Real-world example: NTSYNC (Wine 11)**
-- **Before:** Thread sync required round‑trips to wineserver (2 context switches)
-- **After:** NTSYNC kernel module handles sync in‑kernel
-- **Result:** Up to **778% FPS improvement** in multi‑threaded games
-
-<blockquote>
-Move computation to data, not data to computation.
-</blockquote>
-
----
-
 <!-- What is Tetragon? -->
 ## What is Tetragon?
 
@@ -83,28 +41,16 @@ Move computation to data, not data to computation.
 ![bg left:20%](./img/canada-1.png)
 ![w:128px](https://tetragon.io/images/home/hero-illustration.png)
 
-Tetragon is a flexible Kubernetes-aware security observability and runtime enforcement tool that operates in kernel space using eBPF. By applying policy and filtering directly in the kernel, it allows for reduced observation overhead, tracking of any process, and real-time enforcement of policies.
-
-**Learn more:** <a href="https://tetragon.io/">tetragon.io</a>
-
----
-
-## What is Tetragon? (cont.)
-
-**eBPF-based Security Observability and Runtime Enforcement**
-
-![bg left:20%](./img/canada-1.png)
-![w:128px](https://tetragon.io/images/home/hero-illustration.png)
-
-**Key Benefits:**
-- Corporate compliance with eBPF requirements
 - Kernel‑level visibility impossible with userspace tools
 - Kubernetes native via Custom Resource Definitions (TracingPolicy)
-- <1% CPU overhead, ~100-200 MiB memory per node
+- Filters and enforces policy directly in the kernel – minimal overhead
+- <1% CPU, ~100-200 MiB memory per node
 
 <blockquote>
 Security monitoring from the kernel up.
 </blockquote>
+
+**Learn more:** <a href="https://tetragon.io/">tetragon.io</a>
 
 ---
 
@@ -116,30 +62,34 @@ Security monitoring from the kernel up.
 ![bg left:20%](./img/canada-1.png)
 ![w:128px](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/EBPF_logo.png/250px-EBPF_logo.png)
 
-**Key Properties:**
 - Runs inside the Linux kernel – no kernel module required
 - **Verifier** guarantees safety before loading (proven mathematically)
-- Attaches to kernel events: system calls, function entry/exit, tracepoints, LSM hooks
-
----
-
-<!-- What is eBPF? -->
-## What is eBPF? (cont.)
-
-**eBPF (Extended Berkeley Packet Filter):** An in‑kernel virtual machine that safely runs user‑supplied programs.
-
-![w:128px](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/EBPF_logo.png/250px-EBPF_logo.png)
-![bg left:20%](./img/canada-1.png)
-
-**Safety Guarantees:**
-- No infinite loops – all programs terminate
-- Memory safe – can only access designated stack, maps, context
-- Resource bounded – ~1M instructions max, 512 bytes stack
-
-<br>
+- Attaches to system calls, function entry/exit, tracepoints, LSM hooks
+- **Safety guarantees:** no infinite loops, memory safe, resource bounded
 
 <blockquote>
 Provably safe code in the kernel – verified before loading.
+</blockquote>
+
+---
+
+<!-- Why Kernel Space? -->
+## Why Kernel Space Matters
+
+**The Principle of Proximity:** Move computation to where data resides.
+
+![bg left:20%](./img/canada-1.png)
+
+**The Problem:** Userspace security tools pay a hidden tax:
+- Context switches (kernel↔user)
+- Data copying
+- Latency – by the time userspace sees the event, the moment has passed
+
+**Real-world example: NTSYNC (Wine 11)**
+- Thread sync handled in‑kernel → up to **778% FPS improvement** in multi‑threaded games
+
+<blockquote>
+Move computation to data, not data to computation.
 </blockquote>
 
 ---
@@ -153,55 +103,86 @@ Provably safe code in the kernel – verified before loading.
 
 ---
 
-<!-- Deployment Architecture -->
-## Deployment Architecture
+<!-- Tetragon Architecture -->
+<!-- _class: lead -->
 
-![bg left:20%](./img/canada-1.png)
+## Tetragon Architectural Diagram
 
-**Components:**
-- **DaemonSet:** One agent per node, loads eBPF programs
-- **Operator:** Centralized control, manages TracingPolicy CRDs
-- **Event Export:** Elasticsearch, Kafka, gRPC, stdout
-
-**Resources:**
-- CPU: < 1% per node
-- Memory: ~100-200 MiB per node
-- Privileged container required
+![](https://tetragon.io/svgs/diagram-illustration.svg)
 
 ---
 
-<!-- How We Interact -->
-## How We Interact with Tetragon
-
-**No dedicated UI** – integrates seamlessly with existing tools.
-
----
-
-## CLI (`tetra`)
+<!-- How Tetragon Uses eBPF Hooks -->
+## How Tetragon Uses eBPF Hooks
 
 ![bg left:20%](./img/canada-1.png)
 
-Real-time event viewing and debugging.
+**What we monitor:**
+
+- **Process starts:** `sys_enter_execve`
+- **File reads:** `vfs_read`
+- **TCP connections:** `tcp_connect`
+- **DNS queries:** `udp_recvmsg:53`
+
+**In our Kubeflow cluster:**
+- **Jupyter notebooks** – detect shell escapes via `sys_execve`
+- **Training jobs** – catch credential access via `vfs_read` on `/etc/shadow`, `~/.kube/config`
+- **Inference endpoints** – monitor external connections via `tcp_connect`
+
+---
+
+<!-- Event Flow & Notifications -->
+## Event Flow & Notifications
+
+![bg left:20%](./img/canada-1.png)
+
+**Event Lifecycle:**
+
+Kernel event → eBPF capture → Kubernetes enrichment → Export → Alert
+
+**Notification Paths:**
+- **Critical:** PagerDuty → on-call
+- **High:** Slack #security-alerts
+- **Medium:** Email digest
+- **Low:** Daily report
+
+**Zone Integration:** ELK stack, existing PagerDuty, Kubernetes dashboards
+
+---
+
+<!-- Interaction: CLI -->
+## How We Interact with Tetragon – CLI (`tetra`)
+
+![bg left:20%](./img/canada-1.png)
+
+Real‑time event streaming and debugging from your terminal.
 
 ```bash
-# Stream events from all pods
+# Stream all events in compact format
 tetra getevents -o compact
 
-# Watch specific namespace
+# Filter by namespace and pod
 tetra getevents --namespace default \
   --field-selector "process.pod.name=my-app"
+
+# Export to JSON for further processing
+tetra getevents -o json | jq '.process.exec'
+```
+
+**Installation:**
+```bash
+go install github.com/cilium/tetragon/tetra@latest
 ```
 
 ---
 
-## TracingPolicies as Code
+<!-- Interaction: TracingPolicies as Code -->
+## How We Interact with Tetragon – Policies as Code
 
 ![bg left:20%](./img/canada-1.png)
 
-- YAML configuration, versioned in **Git**
-- Deployed via **ArgoCD** (GitOps)
+TracingPolicies are **Kubernetes CRDs** – defined in YAML, versioned in Git.
 
-Example policy snippet:
 ```yaml
 apiVersion: cilium.io/v1alpha1
 kind: TracingPolicy
@@ -220,303 +201,237 @@ spec:
           valueFd: 1
 ```
 
----
-
-## Event Export & Dashboards
-
-![bg left:20%](./img/canada-1.png)
-
-- **Elasticsearch** – store all Tetragon events
-- **Grafana** – build custom dashboards using Elasticsearch data source
-  - Visualize process executions, network flows, and security events
-  - Alert on suspicious activity
+**Deployed via GitOps (ArgoCD)** – automated sync, version control, rollback.
 
 ---
 
-## gRPC API
+<!-- Interaction: Event Export & Dashboards -->
+## How We Interact with Tetragon – Export & Dashboards
 
 ![bg left:20%](./img/canada-1.png)
 
-Programmatic access for custom integrations (e.g., SIEM, automation).
+**Exporters:** Elasticsearch, Kafka, gRPC, stdout
+
+**Grafana Dashboards:** Build custom visualizations using Elasticsearch as data source.
+
+- Track process executions across namespaces
+- Alert on suspicious network connections
+- Filter by pod labels, namespaces, or specific syscalls
+
+**Example query:** Count of shell executions per namespace in last hour.
+
+---
+
+<!-- Interaction: gRPC API -->
+## How We Interact with Tetragon – gRPC API
+
+![bg left:20%](./img/canada-1.png)
+
+Programmatic access for custom integrations (SIEM, automation, alerting).
 
 ```python
 import tetragon_grpc
 
 client = tetragon_grpc.TetragonClient()
 for event in client.get_events():
-    print(event.process.exec)
+    if event.process.exec.binary == "/bin/bash":
+        print(f"Shell detected in {event.process.pod.namespace}")
+```
+
+**Use cases:**
+- Feed events into a custom SIEM
+- Trigger automated responses
+- Enrich with external threat intelligence
+
+---
+
+<!-- What We Monitor: Key Use Cases -->
+## What We Monitor: Key Use Cases
+
+![bg left:20%](./img/canada-1.png)
+
+- **Credential Access:** `/etc/shadow`, `~/.kube/config` – detect theft and lateral movement
+- **Shell Escapes:** `/bin/bash` from notebooks – container breakout attempts
+- **Data Exfiltration:** Connections to unknown external IPs – potential data theft
+- **Privilege Escalation:** `setuid`, `setgid`, `capset` – prevent privilege escalation
+- **Sensitive Files:** Secrets, tokens, certificates – protect service accounts
+
+**Why these matter:** Common MITRE ATT&CK techniques in containerised environments.
+
+---
+
+<!-- Policy Management: Avoiding False Positives -->
+## Policy Management: Avoiding False Positives
+
+![bg left:20%](./img/canada-1.png)
+
+**Start in Audit Mode:** Deploy without enforcement, baseline for 1‑2 weeks.
+
+**Be Specific:** Use exact paths (`/usr/bin/python3`) not patterns (`*python*`).
+
+**Namespace‑Specific:** Different baselines for Jupyter vs training vs inference.
+
+**Iterative Refinement:** Deploy → observe → refine → repeat.
+
+**Document:** Maintain a runbook of known false positives and their remediation.
+
+---
+
+<!-- Policy Management: Maintainable Policies -->
+## Policy Management: Maintainable Policies
+
+![bg left:20%](./img/canada-1.png)
+
+- **Version Control:** Store in Git, review via pull requests.
+- **CI/CD Pipeline:** Validate YAML, deploy to DEV, test, promote.
+- **Documentation:** Include purpose, false positives, response, ownership.
+- **Lifecycle:** Review quarterly, remove unused, update for new threats.
+- **Testing:** Simulate events against policies before deployment.
+
+---
+
+<!-- Deployment: Helm Installation -->
+## Deployment: Helm Installation
+
+![bg left:20%](./img/canada-1.png)
+
+```bash
+# 1. Add the Cilium Helm repository
+helm repo add cilium https://helm.cilium.io
+helm repo update
+
+# 2. Create namespace and install Tetragon
+helm install tetragon cilium/tetragon \
+  --namespace tetragon \
+  --create-namespace
+
+# 3. Verify the DaemonSet is running
+kubectl -n tetragon get pods
+```
+
+**Expected output:**
+```
+NAME               READY   STATUS    RESTARTS   AGE
+tetragon-xxxxx     1/1     Running   0          1m
+tetragon-operator  1/1     Running   0          1m
 ```
 
 ---
 
-## GitOps with ArgoCD
+<!-- Deployment: Deploying a TracingPolicy -->
+## Deployment: Deploying a TracingPolicy
 
 ![bg left:20%](./img/canada-1.png)
 
-- TracingPolicies stored in Git repository
-- ArgoCD syncs policies automatically to clusters
-- Enables version control, auditing, and rollback
-
----
-
-> **Outcome:** Unified security observability using familiar tools – CLI, Git, Elasticsearch, Grafana, ArgoCD.
-
----
-
-<!-- Event Flow -->
-## Event Flow & Notifications
-
-![bg left:20%](./img/canada-1.png)
-
-**Event Lifecycle:**
-Kernel event → eBPF capture → Kubernetes enrichment → Export → Alert
-
-**Notification Paths:**
-- **Critical:** PagerDuty → on-call
-- **High:** Slack #security-alerts
-- **Medium:** Email digest
-- **Low:** Daily report
-
-**Zone Integration:** ELK stack, existing PagerDuty, Kubernetes dashboards
-
----
-
-<!-- eBPF Hooks -->
-## How Tetragon Uses eBPF Hooks
-
-![bg left:20%](./img/canada-1.png)
-
-**What we monitor:**
-
-- **Process starts:** `sys_enter_execve` (Tracepoint)
-- **File reads:** `vfs_read` (Kprobe)
-- **TCP connections:** `tcp_connect` (Tracepoint)
-- **DNS queries:** `udp_recvmsg:53` (Kprobe)
-
-**Why these hooks?**
-- `sys_*` – system call entry/exit (high‑level process activity)
-- `vfs_*` – virtual filesystem layer (file operations)
-- `tcp_*`, `udp_*` – network stack (connections and DNS)
-
----
-
-## How Tetragon Uses eBPF Hooks (cont.)
-
-![bg left:20%](./img/canada-1.png)
-
-**In our Kubeflow cluster:**
-
-- **Jupyter notebook pods** – Detect shell escapes via `sys_execve` when `/bin/sh` or `/bin/bash` spawns from notebook process
-- **Training jobs** – Catch credential access via `vfs_read` on `/etc/shadow`, `/etc/passwd`, or `~/.kube/config`
-- **Inference endpoints** – Monitor external connections via `tcp_connect` to IPs outside cluster CIDR
-
-<blockquote>
-Deep visibility into system activity – from container to kernel.
-</blockquote>
-
----
-
-<!-- Example: Detect Credential Access -->
-## Example: Detect Credential Access
-
-![bg left:20%](./img/canada-1.png)
-
-**Policy:** Alert when bash executes `passwd` or `shadow`
-
-```yaml
+```bash
+# Example: detect credential access attempts
+cat <<EOF | kubectl apply -f -
+apiVersion: cilium.io/v1alpha1
 kind: TracingPolicy
+metadata:
+  name: detect-credential-access
 spec:
   kprobes:
   - call: sys_execve
     selectors:
-    - matchBinaries: [{operator: In, values: [/bin/bash]}]
-      matchArgs: [{index: 0, operator: Contains, values: [passwd, shadow]}]
+    - matchBinaries:
+        - operator: In
+          values: [/bin/bash, /bin/sh]
+      matchArgs:
+        - index: 0
+          operator: Contains
+          values: [passwd, shadow]
+EOF
 ```
 
-**Event generated:**
-```json
-{
-  "event_type": "process_exec",
-  "binary": "/bin/bash",
-  "arguments": "cat /etc/passwd",
-  "pod": {"namespace": "default", "name": "test-pod"}
-}
+**Verify policy is active:**
+```bash
+kubectl get tracingpolicies
 ```
 
 ---
 
-<!-- What We Monitor -->
-## What We Monitor: Use Cases
+<!-- Deployment: Viewing Events -->
+## Deployment: Viewing Events
 
 ![bg left:20%](./img/canada-1.png)
 
-- **Credential Access:** `/etc/shadow`, `~/.kube/config` – prevent theft and lateral movement
-- **Shell Escapes:** `/bin/bash` from notebooks – prevent container breakout
-- **Data Exfiltration:** External IPs, large transfers – detect data theft
-- **Privilege Escalation:** `setuid`, `setgid`, `capset` – prevent attacks
-- **Sensitive Files:** Secrets, tokens, certificates – protect service accounts
+**Forward the gRPC port and stream events:**
+
+```bash
+# Port‑forward to the Tetragon DaemonSet
+kubectl port-forward -n tetragon ds/tetragon 54321:54321
+
+# In another terminal, stream events
+tetra getevents -o compact
+```
+
+**Example event output:**
+```
+🚀 process /bin/bash cat /etc/shadow
+   pod: default/test-pod, container: app
+```
+
+**Export to Elasticsearch:** Configure the Helm chart with `exporters.elasticsearch.enabled=true`.
 
 ---
 
-<!-- Avoiding False Positives -->
-## Avoiding False Positives
+<!-- Implementation Plan: Phase 1 -->
+## Implementation Plan: Phase 1 – Validation in DEV
 
 ![bg left:20%](./img/canada-1.png)
 
-**Start in Audit Mode:** Deploy without enforcement, baseline for 1-2 weeks.
-
-**Be Specific:** Use exact paths (`/usr/bin/python3`) not patterns (`*python*`).
-
-**Namespace-Specific:** Different baselines for Jupyter vs training vs inference.
-
-**Iterative Refinement:** Deploy → observe → refine → repeat.
-
-**Document:** Maintain runbook of known false positives.
+- Deploy Tetragon to Zone DEV AKS
+- Apply baseline policies (process exec, file access, network)
+- Export events to test Elasticsearch
+- Measure overhead (<1% CPU, <200 MiB memory)
 
 ---
 
-<!-- Building Maintainable Policies -->
-## Building Maintainable Policies
-
-![bg left:20%](./img/canada-1.png)
-
-**Version Control:** Store in Git, review via pull requests.
-
-**CI/CD Pipeline:** Validate YAML, deploy to DEV, test, promote.
-
-**Documentation:** What it detects, false positives, response, ownership.
-
-**Lifecycle:** Review quarterly, remove unused, update for threats.
-
----
-
-<!-- Deployment Plan -->
-## Deployment Plan / Installation (1/2)
-
-![bg left:20%](./img/canada-1.png)
-
-   ```bash
-   # 1. Add the Cilium Helm repository:
-   helm repo add cilium https://helm.cilium.io
-   helm repo update
-
-   # 2. Install Tetragon with Helm:
-   helm install tetragon cilium/tetragon \
-     --namespace tetragon \
-     --create-namespace
-
-   # 3. Verify installation:
-   kubectl -n tetragon get pods
-   # Should see tetragon-* DaemonSet pods running
-
-   # 4. Install tetra CLI (optional):
-   go install github.com/cilium/tetragon/tetra@latest
-   ```
-
----
-
-<!-- Deployment Plan -->
-## Deployment Plan / Installation (2/2)
-
-![bg left:20%](./img/canada-1.png)
-
-   ```bash
-   # 5. Deploy a TracingPolicy:
-   cat <<EOF | kubectl apply -f -
-   apiVersion: cilium.io/v1alpha1
-   kind: TracingPolicy
-   metadata:
-     name: detect-credential-access
-   spec:
-     kprobes:
-     - call: sys_execve
-       selectors:
-       - matchBinaries:
-           - operator: In
-             values: [/bin/bash, /bin/sh]
-         matchArgs:
-           - index: 0
-           operator: Contains
-           values: [passwd, shadow]
-   EOF
-
-   # 6. View events in real-time:
-   kubectl port-forward -n tetragon ds/tetragon 54321:54321
-   tetra getevents -o compact
-   ```
-
----
-
-<!-- Next Steps -->
-## Next Steps
-
-![bg left:20%](./img/canada-1.png)
-
-**Immediate Actions:**
-
-1. **Chart Porting:** Add Tetragon to `cloudnative-platform-charts`
-2. **DEV Deployment:** Deploy to Zone DEV (AKS) with:
-   - Create `tetragon` namespace
-   - Install via Helm with overrides for AKS
-   - Apply baseline TracingPolicies (process exec, file writes, network)
-3. **Documentation:** Document configuration, policies, and integration with existing monitoring (ELK / Splunk)
-
----
-
-<!-- Implementation Steps for The Zone -->
-## Implementation Steps for The Zone
-
-![bg left:20%](./img/canada-1.png)
-
-**Phase 1: Validation in DEV**
-- Deploy Tetragon to Zone DEV AKS cluster
-- Deploy a few TracingPolicies:
-  - **Process execution** in Kubeflow namespaces
-  - **File access** to `/etc/shadow`, `/etc/passwd`, `/home/*/.kube`
-  - **Network connections** from unknown external IPs
-- Export events to a test Elasticsearch index
-- Measure CPU/memory overhead (baseline vs. with policies)
-
----
-
-<!-- Implementation Steps for The Zone -->
-## Implementation Steps for The Zone
+<!-- Implementation Plan: Phases 2–3 -->
+## Implementation Plan: Phases 2–3 – Production & Automation
 
 ![bg left:20%](./img/canada-1.png)
 
 **Phase 2: Production Readiness**
-- Define service level objectives (SLOs) for event latency and throughput
-- Create Terraform module for Tetragon deployment (as part of `cloudnative-platform-charts`)
-- Add Tetragon to cluster provisioning scripts
+- Define SLOs for event latency & throughput
+- Create Terraform module in `cloudnative-platform-charts`
+- Integrate with cluster provisioning scripts
 
-**Phase 3: Integration & Automation**
-- Create CI/CD pipeline for TracingPolicy updates
-- Implement alerting on critical events (e.g., credential access)
-- Document for the wider team
+**Phase 3: Automation & Handover**
+- CI/CD pipeline for TracingPolicy updates
+- Alerting on critical events (PagerDuty, Slack)
+- Documentation and runbooks
 
 ---
 
-<!-- Implementation Roadmap -->
-## Implementation Roadmap
+<!-- Implementation Roadmap: Weeks 1–2 -->
+## Implementation Roadmap: Weeks 1–2 – Deploy & Baseline
 
 ![bg left:20%](./img/canada-1.png)
 
-**Weeks 1-2: Deploy & Baseline**
 - Deploy Tetragon to Zone DEV AKS
 - Deploy baseline TracingPolicies (audit mode)
-- Export events to test Elasticsearch index
-- Measure overhead (CPU #sym.lt 1%, memory #sym.lt 200 MiB)
+- Export events to test Elasticsearch
+- Measure overhead
 
-**Weeks 3-4: Tune & Integrate**
+---
+
+<!-- Implementation Roadmap: Weeks 3–6 -->
+## Implementation Roadmap: Weeks 3–6 – Tune, Integrate, Automate
+
+![bg left:20%](./img/canada-1.png)
+
+**Weeks 3–4: Tune & Integrate**
 - Refine policies based on observed events
-- Define SLOs (latency #sym.lt 100ms, 99.9% availability)
+- Define SLOs (latency <100ms, 99.9% availability)
 - Create Terraform module for `cloudnative-platform-charts`
 - Integrate with existing ELK/Splunk
 
-**Weeks 5-6: Automate & Alert**
-- Create CI/CD pipeline for TracingPolicy updates
+**Weeks 5–6: Automate & Alert**
+- CI/CD pipeline for TracingPolicy updates
 - Implement alerting (PagerDuty, Slack, email)
-- Document runbooks and troubleshooting guides
+- Document runbooks
 - Share findings organization-wide
 
 ---
@@ -526,17 +441,14 @@ spec:
 
 ![bg left:20%](./img/canada-1.png)
 
-**Research Foundation:**
-- Tetragon provides needed security observability
-- eBPF provides safe, efficient kernel technology
-- Principle of Proximity explains *why* eBPF is so powerful
-
-**Path Forward:** Port chart → Deploy in DEV → Validate → Share findings
-
-**Immediate Next Step:** Deploy Tetragon in Zone DEV this sprint.
+- **What:** Tetragon delivers kernel‑level security observability with minimal overhead.
+- **Why:** eBPF is safe, efficient, and mandatory for modern security stacks.
+- **How:** We’ll deploy to Zone DEV, validate, refine policies, and integrate with existing monitoring.
+- **Next Step:** Port the Helm chart and deploy to Zone DEV this sprint.
 
 ---
-<!-- _class: references -->
+
+<!-- References -->
 ## References
 
 ![bg left:20%](./img/canada-1.png)
@@ -554,8 +466,9 @@ spec:
 6. McCanne, S. & Jacobson, V. (1993). <a href="https://www.tcpdump.org/papers/bpf-usenix93.pdf">"The BSD Packet Filter."</a> USENIX.
 
 ---
-<!-- _class: references -->
-## References (continued)
+
+<!-- References -->
+## References
 
 ![bg left:20%](./img/canada-1.png)
 

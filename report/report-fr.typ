@@ -14,7 +14,7 @@
   ),
   titulo: [Tetragon et eBPF],
   resumen: [
-    Nous recommandons d'adopter *Tetragon* comme plateforme principale d'observabilité de sécurité pour l'infrastructure Kubernetes de Statistique Canada. Tetragon est déjà en cours d'exécution expérimentale dans les grappes Aurora (service Kubernetes géré de SSC). Le profil de risque est faible : le vérificateur eBPF garantit mathématiquement la sécurité des programmes et la consommation de ressources est minimale (CPU #sym.lt 1%, mémoire ~100-200 MiB par nœud). Ce rapport fournit les détails techniques, la stratégie de déploiement et une feuille de route d'implémentation de six semaines.
+    Nous recommandons d'adopter *Tetragon* comme plateforme principale d'observabilité de sécurité pour l'infrastructure Kubernetes de Statistique Canada. Tetragon est déjà en cours d'exécution dans les grappes Aurora (service Kubernetes géré de SSC). Le profil de risque est faible : le vérificateur eBPF garantit mathématiquement la sécurité des programmes et la consommation de ressources est minimale (CPU #sym.lt 1%, mémoire ~100-200 MiB par nœud). Ce rapport fournit les détails techniques, la stratégie de déploiement et une feuille de route d'implémentation de six semaines.
   ],
   fecha: "2026-03-30",
   formato: (
@@ -31,7 +31,7 @@ Adopter *Tetragon* comme plateforme principale d'observabilité de sécurité po
 
 == Contexte
 
-Tetragon est déjà en cours d'exécution expérimentale dans les grappes Aurora (service Kubernetes géré de SSC). Plutôt que d'attendre le calendrier de l'équipe Aurora, Statistique Canada peut accélérer l'adoption en validant Tetragon indépendamment dans Zone DEV en utilisant notre grappe AKS avec les charges de travail Kubeflow.
+Tetragon est déjà en cours d'exécution dans les grappes Aurora (service Kubernetes géré de SSC). Plutôt que d'attendre le calendrier de l'équipe Aurora, Statistique Canada peut accélérer l'adoption en validant Tetragon indépendamment dans Zone DEV en utilisant notre grappe AKS avec les charges de travail Kubeflow.
 
 == Risque et coût
 

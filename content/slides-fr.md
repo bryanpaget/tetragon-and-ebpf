@@ -3,9 +3,9 @@
 # Qu'est-ce que Tetragon (et eBPF) ?
 ![bg left:20%](./img/canada-1.png)
 
-![w:200px](https://tetragon.io/images/tetragon-shield.png)
-
 <br>
+
+![w:128px](https://tetragon.io/images/tetragon-shield.png)
 
 ### L'observabilité de sécurité depuis le noyau
 
@@ -14,15 +14,6 @@
 #### Statistique Canada 2026
 
 *Présenté par l'équipe de la Zone*
-
----
-
-<!-- Architecture Tetragon -->
-<!-- _class: lead -->
-
-## Architecture Tetragon
-
-![](https://tetragon.io/svgs/diagram-illustration.svg)
 
 ---
 
@@ -42,38 +33,6 @@ De la recherche au déploiement prêt pour la production.
 
 ---
 
-<!-- Motivation : Pourquoi l'espace noyau? -->
-## Pourquoi l'espace noyau importe
-
-**Le problème :** Les outils de sécurité dans l'espace utilisateur paient une taxe cachée sur chaque événement.
-
-![bg left:20%](./img/canada-1.png)
-
-**Pourquoi l'espace utilisateur est plus lent :**
-1. **Changements de contexte :** Le CPU doit sauvegarder/restaurer l'état en traversant la frontière noyau↔utilisateur
-2. **Copie de données :** Les événements sont copiés de la mémoire du noyau vers les tampons utilisateurs
-3. **Latence :** Quand l'espace utilisateur voit l'événement, le moment est passé
-
----
-
-<!-- Motivation : Pourquoi l'espace noyau? -->
-## Pourquoi l'espace noyau importe (suite)
-
-**Le principe de proximité :** Déplacer le calcul vers les données.
-
-![bg left:20%](./img/canada-1.png)
-
-**Exemple concret : NTSYNC (Wine 11)**
-- **Avant :** La synchronisation des threads nécessitait des allers-retours vers le processus wineserver (2 changements de contexte)
-- **Après :** Le module noyau NTSYNC gère la synchronisation dans le noyau
-- **Résultat :** Jusqu'à **778 % d'amélioration FPS** dans les jeux multi-threadés
-
-<blockquote>
-Déplacer le calcul vers les données, pas les données vers le calcul.
-</blockquote>
-
----
-
 <!-- Qu'est-ce que Tetragon? -->
 ## Qu'est-ce que Tetragon ?
 
@@ -82,26 +41,16 @@ Déplacer le calcul vers les données, pas les données vers le calcul.
 ![bg left:20%](./img/canada-1.png)
 ![w:128px](https://tetragon.io/images/home/hero-illustration.png)
 
-Tetragon est un outil flexible d'observabilité de sécurité et d'application d'exécution pour Kubernetes qui opère dans l'espace noyau en utilisant eBPF. En appliquant des politiques et des filtres directement dans le noyau, il permet une surveillance réduite, le suivi de tout processus et l'application de politiques en temps réel.
-
-**En savoir plus :** <a href="https://tetragon.io/">tetragon.io</a>
-
----
-
-## Qu'est-ce que Tetragon ? (suite)
-
-![bg left:20%](./img/canada-1.png)
-![w:128px](https://tetragon.io/images/home/hero-illustration.png)
-
-**Avantages clés :**
-- Conformité aux exigences eBPF
 - Visibilité au niveau du noyau impossible avec les outils utilisateurs
-- Natif Kubernetes via les CRD (TracingPolicy)
-- <1% de surcharge CPU, ~100-200 MiB de mémoire par nœud
+- Natif Kubernetes via les Custom Resource Definitions (TracingPolicy)
+- Filtre et applique les politiques directement dans le noyau – impact minimal
+- <1% CPU, ~100-200 MiB de mémoire par nœud
 
 <blockquote>
 Surveillance de sécurité depuis le noyau.
 </blockquote>
+
+**En savoir plus :** <a href="https://tetragon.io/">tetragon.io</a>
 
 ---
 
@@ -113,28 +62,34 @@ Surveillance de sécurité depuis le noyau.
 ![bg left:20%](./img/canada-1.png)
 ![w:128px](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/EBPF_logo.png/250px-EBPF_logo.png)
 
-**Propriétés clés :**
-- S'exécute dans le noyau Linux — aucun module noyau requis
+- S'exécute dans le noyau Linux – aucun module noyau requis
 - **Vérificateur** garantit la sécurité avant le chargement (prouvé mathématiquement)
-- S'attache aux événements du noyau : appels système, entrée/sortie de fonctions, points de trace, hooks LSM
-
----
-
-<!-- Qu'est-ce que eBPF? -->
-## Qu'est-ce que eBPF ? (suite)
-
-**eBPF (Extended Berkeley Packet Filter) :** Une machine virtuelle dans le noyau qui exécute en toute sécurité des programmes fournis par l'utilisateur.
-
-![w:128px](https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/EBPF_logo.png/250px-EBPF_logo.png)
-![bg left:20%](./img/canada-1.png)
-
-**Garanties de sécurité :**
-- Pas de boucles infinies – tous les programmes se terminent
-- Sécurité mémoire – peut seulement accéder à la pile, aux cartes et au contexte désignés
-- Bornes de ressources – ~1M d'instructions max, 512 octets de pile
+- S'attache aux appels système, entrée/sortie de fonctions, points de trace, hooks LSM
+- **Garanties de sécurité :** pas de boucles infinies, sécurité mémoire, bornes de ressources
 
 <blockquote>
 Code prouvé sûr dans le noyau – vérifié avant le chargement.
+</blockquote>
+
+---
+
+<!-- Pourquoi l'espace noyau? -->
+## Pourquoi l'espace noyau importe
+
+**Le principe de proximité :** Déplacer le calcul vers les données.
+
+![bg left:20%](./img/canada-1.png)
+
+**Le problème :** Les outils de sécurité dans l'espace utilisateur paient une taxe cachée :
+- Changements de contexte (noyau↔utilisateur)
+- Copie de données
+- Latence – quand l'espace utilisateur voit l'événement, le moment est passé
+
+**Exemple concret : NTSYNC (Wine 11)**
+- Synchronisation des threads gérée dans le noyau → jusqu'à **778 % d'amélioration FPS** dans les jeux multi-threadés
+
+<blockquote>
+Déplacer le calcul vers les données, pas les données vers le calcul.
 </blockquote>
 
 ---
