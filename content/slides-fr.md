@@ -123,11 +123,7 @@ Déplacer le calcul vers les données, pas les données vers le calcul.
 <!-- Comment nous interagissons -->
 ## Comment nous interagissons avec Tetragon
 
-**Pas d'interface dédiée** – s'intègre parfaitement aux outils existants.
-
----
-
-## CLI (`tetra`)
+### CLI (`tetra`)
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -144,7 +140,7 @@ tetra getevents --namespace default \
 
 ---
 
-## TracingPolicies as Code
+### TracingPolicies as Code
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -172,7 +168,7 @@ spec:
 
 ---
 
-## Export d'événements et tableaux de bord
+### Export d'événements et tableaux de bord
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -183,7 +179,7 @@ spec:
 
 ---
 
-## API gRPC
+### API gRPC
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -199,7 +195,7 @@ for event in client.get_events():
 
 ---
 
-## GitOps avec ArgoCD
+### GitOps avec ArgoCD
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -228,14 +224,6 @@ for event in client.get_events():
 - **Faible :** Rapport quotidien
 
 **Intégration Zone :** ELK, PagerDuty existant, tableaux de bord Kubernetes
-
----
-
-<!-- Architecture Tetragon -->
-<!-- _class: lead -->
-## Architecture Tetragon
-
-![bg fit:70%](https://tetragon.io/svgs/diagram-illustration.svg)
 
 ---
 

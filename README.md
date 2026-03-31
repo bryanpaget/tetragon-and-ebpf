@@ -379,19 +379,23 @@ Tetragon represents not just a compliance checkbox but a fundamental improvement
 ## 8.0 References
 
 **Tetragon & eBPF:**
-1. [Tetragon Documentation](https://tetragon.io/docs/)  
-2. [Tetragon Installation Guide](https://tetragon.io/docs/installation/kubernetes/)  
+
+1. [Tetragon Documentation](https://tetragon.io/docs/)
+2. [Tetragon Installation Guide](https://tetragon.io/docs/installation/kubernetes/)
 3. [eBPF.io – Introduction to eBPF](https://ebpf.io/)
 
 **Technical Resources:**
-4. Starovoitov, A. (2014). ["BPF: the universal in‑kernel virtual machine."](https://lwn.net/Articles/599755/) LWN.net.  
-5. Rice, L. (2020). *Learning eBPF*. O'Reilly Media.  
+
+4. Starovoitov, A. (2014). ["BPF: the universal in‑kernel virtual machine."](https://lwn.net/Articles/599755/) LWN.net.
+5. Rice, L. (2020). *Learning eBPF*. O'Reilly Media.
 6. McCanne, S. & Jacobson, V. (1993). ["The BSD Packet Filter."](https://www.tcpdump.org/papers/bpf-usenix93.pdf) USENIX Winter 1993.
 
 **Linux Kernel:**
+
 7. Linux Kernel Source: `kernel/bpf/verifier.c`
 
 **Aurora Implementation:**
+
 8. [Aurora Platform Charts](https://github.com/gccloudone-aurora/aurora-platform-charts)
 
 ---

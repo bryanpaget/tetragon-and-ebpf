@@ -151,7 +151,9 @@ Kernel event → eBPF capture → Kubernetes enrichment → Export → Alert
 ---
 
 <!-- Interaction: CLI -->
-## How We Interact with Tetragon – CLI (`tetra`)
+## How We Interact with Tetragon
+
+### CLI (`tetra`)
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -177,7 +179,9 @@ go install github.com/cilium/tetragon/tetra@latest
 ---
 
 <!-- Interaction: TracingPolicies as Code -->
-## How We Interact with Tetragon – Policies as Code
+## How We Interact with Tetragon
+
+### Policies as Code
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -206,7 +210,9 @@ spec:
 ---
 
 <!-- Interaction: Event Export & Dashboards -->
-## How We Interact with Tetragon – Export & Dashboards
+## How We Interact with Tetragon
+
+### Export & Dashboards
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -223,7 +229,9 @@ spec:
 ---
 
 <!-- Interaction: gRPC API -->
-## How We Interact with Tetragon – gRPC API
+## How We Interact with Tetragon
+
+### gRPC API
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -291,7 +299,9 @@ for event in client.get_events():
 ---
 
 <!-- Deployment: Helm Installation -->
-## Deployment: Helm Installation
+## Deployment
+
+### Helm Installation
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -319,7 +329,9 @@ tetragon-operator  1/1     Running   0          1m
 ---
 
 <!-- Deployment: Deploying a TracingPolicy -->
-## Deployment: Deploying a TracingPolicy
+## Deployment
+
+### Deploying a TracingPolicy
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -352,7 +364,9 @@ kubectl get tracingpolicies
 ---
 
 <!-- Deployment: Viewing Events -->
-## Deployment: Viewing Events
+## Deployment
+
+### Viewing Events
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -377,7 +391,9 @@ tetra getevents -o compact
 ---
 
 <!-- Implementation Plan: Phase 1 -->
-## Implementation Plan: Phase 1 – Validation in DEV
+## Implementation Plan
+
+### Phase 1 – Validation in DEV
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -389,7 +405,9 @@ tetra getevents -o compact
 ---
 
 <!-- Implementation Plan: Phases 2–3 -->
-## Implementation Plan: Phases 2–3 – Production & Automation
+## Implementation Plan
+
+### Phases 2–3 – Production & Automation
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -406,7 +424,9 @@ tetra getevents -o compact
 ---
 
 <!-- Implementation Roadmap: Weeks 1–2 -->
-## Implementation Roadmap: Weeks 1–2 – Deploy & Baseline
+## Implementation Roadmap
+
+### Weeks 1–2 – Deploy & Baseline
 
 ![bg left:20%](./img/canada-1.png)
 
@@ -418,7 +438,9 @@ tetra getevents -o compact
 ---
 
 <!-- Implementation Roadmap: Weeks 3–6 -->
-## Implementation Roadmap: Weeks 3–6 – Tune, Integrate, Automate
+## Implementation Roadmap
+
+### Weeks 3–6 – Tune, Integrate, Automate
 
 ![bg left:20%](./img/canada-1.png)
 
