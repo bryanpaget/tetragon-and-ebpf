@@ -29,10 +29,10 @@ style: |
 
       /* Size variables */
       --base-font-size: 12px;
-      --h1-size: 1.5em;
-      --h2-size: 1.3em;
-      --h3-size: 1.1em;
-      --p-size: 0.9em;
+      --h1-size: 1.6em;
+      --h2-size: 1em;
+      --h3-size: 0.7em;
+      --p-size: 0.8em;
       --code-size: 0.8em;
 
       /* Spacing variables */
@@ -77,22 +77,22 @@ style: |
   h1 {
       font-size: var(--h1-size);
       font-weight: 600;
-      margin-bottom: var(--element-margin);
       margin-top: 0;
   }
 
   h2 {
       font-size: var(--h2-size);
       font-weight: 500;
-      margin-bottom: var(--element-margin);
       margin-top: 0;
   }
 
   h3 {
       font-size: var(--h3-size);
       font-weight: 500;
-      margin-bottom: var(--element-margin);
       margin-top: 0;
+      color: var(--dark-gray);
+      font-style: italic;
+      font-weight: 700;
   }
 
   h6 {

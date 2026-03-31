@@ -4,11 +4,13 @@
 ![bg left:20%](./img/canada-1.png)
 
 <br>
+<br>
 
 ![w:128px](https://tetragon.io/images/tetragon-shield.png)
 
 ### Security Observability from the Kernel Up
 
+<br>
 <br>
 
 #### Statistics Canada 2026
@@ -136,17 +138,18 @@ Move computation to data, not data to computation.
 
 ![bg left:20%](./img/canada-1.png)
 
-**Event Lifecycle:**
+### Event Lifecycle:
 
 Kernel event → eBPF capture → Kubernetes enrichment → Export → Alert
 
-**Notification Paths:**
+### Notification Paths:
 - **Critical:** PagerDuty → on-call
 - **High:** Slack #security-alerts
 - **Medium:** Email digest
 - **Low:** Daily report
 
-**Zone Integration:** ELK stack, existing PagerDuty, Kubernetes dashboards
+### Zone Integration:
+ELK stack, existing PagerDuty, Kubernetes dashboards
 
 ---
 
@@ -171,7 +174,7 @@ tetra getevents --namespace default \
 tetra getevents -o json | jq '.process.exec'
 ```
 
-**Installation:**
+### Installation:
 ```bash
 go install github.com/cilium/tetragon/tetra@latest
 ```
@@ -216,15 +219,18 @@ spec:
 
 ![bg left:20%](./img/canada-1.png)
 
-**Exporters:** Elasticsearch, Kafka, gRPC, stdout
+### Exporters:
+Elasticsearch, Kafka, gRPC, stdout
 
-**Grafana Dashboards:** Build custom visualizations using Elasticsearch as data source.
+### Grafana Dashboards:
+Build custom visualizations using Elasticsearch as data source.
 
 - Track process executions across namespaces
 - Alert on suspicious network connections
 - Filter by pod labels, namespaces, or specific syscalls
 
-**Example query:** Count of shell executions per namespace in last hour.
+### Example query:
+Count of shell executions per namespace in last hour.
 
 ---
 
@@ -246,7 +252,7 @@ for event in client.get_events():
         print(f"Shell detected in {event.process.pod.namespace}")
 ```
 
-**Use cases:**
+### Use cases:
 - Feed events into a custom SIEM
 - Trigger automated responses
 - Enrich with external threat intelligence
@@ -264,7 +270,8 @@ for event in client.get_events():
 - **Privilege Escalation:** `setuid`, `setgid`, `capset` – prevent privilege escalation
 - **Sensitive Files:** Secrets, tokens, certificates – protect service accounts
 
-**Why these matter:** Common MITRE ATT&CK techniques in containerised environments.
+### Why these matter:
+Common MITRE ATT&CK techniques in containerised environments.
 
 ---
 
@@ -273,15 +280,20 @@ for event in client.get_events():
 
 ![bg left:20%](./img/canada-1.png)
 
-**Start in Audit Mode:** Deploy without enforcement, baseline for 1‑2 weeks.
+### Start in Audit Mode:
+Deploy without enforcement, baseline for 1‑2 weeks.
 
-**Be Specific:** Use exact paths (`/usr/bin/python3`) not patterns (`*python*`).
+### Be Specific:
+Use exact paths (`/usr/bin/python3`) not patterns (`*python*`).
 
-**Namespace‑Specific:** Different baselines for Jupyter vs training vs inference.
+### Namespace‑Specific:
+Different baselines for Jupyter vs training vs inference.
 
-**Iterative Refinement:** Deploy → observe → refine → repeat.
+### Iterative Refinement:
+Deploy → observe → refine → repeat.
 
-**Document:** Maintain a runbook of known false positives and their remediation.
+### Document:
+Maintain a runbook of known false positives and their remediation.
 
 ---
 
@@ -319,7 +331,7 @@ helm install tetragon cilium/tetragon \
 kubectl -n tetragon get pods
 ```
 
-**Expected output:**
+### Expected output:
 ```
 NAME               READY   STATUS    RESTARTS   AGE
 tetragon-xxxxx     1/1     Running   0          1m
@@ -329,8 +341,6 @@ tetragon-operator  1/1     Running   0          1m
 ---
 
 <!-- Deployment: Deploying a TracingPolicy -->
-## Deployment
-
 ### Deploying a TracingPolicy
 
 ![bg left:20%](./img/canada-1.png)
@@ -356,7 +366,8 @@ spec:
 EOF
 ```
 
-**Verify policy is active:**
+### Verify policy is active:
+
 ```bash
 kubectl get tracingpolicies
 ```
@@ -370,7 +381,7 @@ kubectl get tracingpolicies
 
 ![bg left:20%](./img/canada-1.png)
 
-**Forward the gRPC port and stream events:**
+### Forward the gRPC port and stream events:
 
 ```bash
 # Port‑forward to the Tetragon DaemonSet
@@ -380,7 +391,7 @@ kubectl port-forward -n tetragon ds/tetragon 54321:54321
 tetra getevents -o compact
 ```
 
-**Example event output:**
+### Example event output:
 ```
 🚀 process /bin/bash cat /etc/shadow
    pod: default/test-pod, container: app
@@ -475,13 +486,13 @@ tetra getevents -o compact
 
 ![bg left:20%](./img/canada-1.png)
 
-**Tetragon & eBPF:**
+### Tetragon & eBPF:
 
 1. <a href="https://tetragon.cilium.io/docs/">Tetragon Documentation</a>
 2. <a href="https://ebpf.io/">eBPF.io – Introduction to eBPF</a>
 3. <a href="https://github.com/cilium/tetragon">Cilium Tetragon GitHub</a>
 
-**Technical Resources:**
+### Technical Resources:
 
 4. Starovoitov, A. (2014). <a href="https://lwn.net/Articles/599755/">"BPF: the universal in‑kernel virtual machine."</a> LWN.net.
 5. Rice, L. (2020). <a href="https://www.oreilly.com/library/view/learning-ebpf/9781098135119/ch01.html"><i>Learning eBPF</i></a>. O'Reilly Media.
@@ -494,10 +505,10 @@ tetra getevents -o compact
 
 ![bg left:20%](./img/canada-1.png)
 
-**Linux Kernel:**
+### Linux Kernel:
 
 7. Linux Kernel Source: <a href="https://github.com/torvalds/linux/blob/master/kernel/bpf/verifier.c"><code>kernel/bpf/verifier.c</code></a>
 
-**Aurora Implementation:**
+### Aurora Implementation:
 
 8. <a href="https://github.com/gccloudone-aurora/aurora-platform-charts/tree/main/stable/aurora-platform/charts/aurora-core/templates/tetragon">Aurora Platform Charts</a>
