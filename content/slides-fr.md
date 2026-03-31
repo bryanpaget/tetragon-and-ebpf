@@ -17,6 +17,15 @@
 
 ---
 
+<!-- Architecture Tetragon -->
+<!-- _class: lead -->
+
+## Architecture Tetragon
+
+![](https://tetragon.io/svgs/diagram-illustration.svg)
+
+---
+
 <!-- Résumé -->
 ## Résumé
 
@@ -130,10 +139,12 @@ Code prouvé sûr dans le noyau – vérifié avant le chargement.
 
 ---
 
-<!-- Architecture Tetragon -->
+<!-- Architecture eBPF -->
 <!-- _class: lead -->
 
-![](https://tetragon.io/svgs/diagram-illustration.svg)
+## Architecture eBPF
+
+![](https://ebpf.io/static/e293240ecccb9d506587571007c36739/691bc/overview.webp)
 
 ---
 

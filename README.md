@@ -64,6 +64,12 @@ The tool addresses several critical needs:
 
 Tetragon is enabled experimentally in Aurora. It is planned for migration to `cloudnative-platform-charts`, though no timeline exists. This presents an opportunity: we can accelerate adoption by contributing the chart ourselves and validating in Zone DEV.
 
+### 1.3 Tetragon Architecture
+
+![Tetragon Architecture Diagram](https://tetragon.io/svgs/diagram-illustration.svg)
+
+*Figure: Tetragon operates in kernel space via eBPF, capturing events at the source and enriching them with Kubernetes metadata before exporting to userspace.*
+
 ---
 
 ## 2.0 The Foundation: eBPF
@@ -114,6 +120,12 @@ The verifier's guarantees are what make eBPF safe enough to run in production ke
 **Memory Safety:** eBPF programs cannot access kernel memory outside their designated stack, map memory, or context. The verifier tracks every memory access, preventing corruption of kernel data structures.
 
 **Resource Boundedness:** Every eBPF program has statically known upper bounds on execution time and memory usage. Maximum instruction count, stack size (512 bytes), and map sizes are all checked. This ensures predictable, low overhead even on high-frequency hooks.
+
+### 2.4 eBPF Architecture
+
+![eBPF Architecture Diagram](https://ebpf.io/static/e293240ecccb9d506587571007c36739/691bc/overview.webp)
+
+*Figure: eBPF programs run safely in the kernel, attached to various hook points (kprobes, tracepoints, LSM), with verifier ensuring safety before loading.*
 
 ---
 
@@ -406,6 +418,12 @@ Tetragon est activé de manière expérimentale dans les grappes Aurora depuis f
 
 **DEV de la Zone :** Un environnement Kubernetes sûr, hors production, où nous pouvons expérimenter de nouvelles technologies sans risquer les charges de travail ou les données de production.
 
+### 1.3 Architecture Tetragon
+
+![Diagramme d'architecture Tetragon](https://tetragon.io/svgs/diagram-illustration.svg)
+
+*Figure : Tetragon opère dans l'espace noyau via eBPF, capturant les événements à la source et les enrichissant avec les métadonnées Kubernetes avant l'export vers l'espace utilisateur.*
+
 ---
 
 ## 2.0 Le fondement : eBPF
@@ -456,6 +474,12 @@ Les garanties du vérificateur rendent eBPF suffisamment sûr pour s'exécuter d
 **Sécurité mémoire :** Les programmes eBPF ne peuvent pas accéder à la mémoire du noyau en dehors de leur pile désignée, de la mémoire des cartes, ou de leur contexte. Le vérificateur suit chaque accès mémoire, prévenant la corruption des structures de données du noyau.
 
 **Bornitude des ressources :** Tout programme eBPF a des bornes supérieures statiquement connues sur le temps d'exécution et l'utilisation de la mémoire. Le nombre maximal d'instructions, la taille de la pile (512 octets), et les tailles des cartes sont tous vérifiés. Cela assure une surcharge faible et prévisible même sur des hooks à haute fréquence.
+
+### 2.4 Architecture eBPF
+
+![Diagramme d'architecture eBPF](https://ebpf.io/static/e293240ecccb9d506587571007c36739/691bc/overview.webp)
+
+*Figure : Les programmes eBPF s'exécutent en toute sécurité dans le noyau, attachés à divers points d'attache (kprobes, tracepoints, LSM), le vérificateur assurant la sécurité avant le chargement.*
 
 ---
 

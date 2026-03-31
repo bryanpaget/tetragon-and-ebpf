@@ -116,6 +116,10 @@ Il surveille :
   ],
 )
 
+== Architecture Tetragon
+
+![](https://tetragon.io/svgs/diagram-illustration.svg)
+
 = Comprendre eBPF
 
 == Définition
@@ -166,6 +170,10 @@ Les cas d'utilisation d'eBPF s'étendent bien au-delà de la surveillance de sé
 )
 
 Cette dynamique de l'écosystème indique qu'eBPF devient un [*mécanisme central d'extensibilité du noyau*] — une technologie stratégique dans laquelle il vaut la peine d'investir.
+
+== Architecture eBPF
+
+![](https://ebpf.io/static/e293240ecccb9d506587571007c36739/691bc/overview.webp)
 
 = Stratégie de déploiement
 

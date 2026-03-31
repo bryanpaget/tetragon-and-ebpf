@@ -116,6 +116,10 @@ Tetragon monitors:
   ],
 )
 
+== Tetragon Architecture
+
+![](https://tetragon.io/svgs/diagram-illustration.svg)
+
 = Understanding eBPF
 
 == Definition
@@ -166,6 +170,10 @@ eBPF's use cases extend well beyond security monitoring. Recent kernel developme
 )
 
 This ecosystem momentum indicates eBPF is becoming a [*core kernel extensibility mechanism*] — a strategic technology worth investing in.
+
+== eBPF Architecture
+
+![](https://ebpf.io/static/e293240ecccb9d506587571007c36739/691bc/overview.webp)
 
 = Deployment Strategy
 

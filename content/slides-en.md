@@ -3,9 +3,9 @@
 # What is Tetragon (and eBPF)?
 ![bg left:20%](./img/canada-1.png)
 
-![w:200px](https://tetragon.io/images/tetragon-shield.png)
-
 <br>
+
+![w:128px](https://tetragon.io/images/tetragon-shield.png)
 
 ### Security Observability from the Kernel Up
 
@@ -14,6 +14,15 @@
 #### Statistics Canada 2026
 
 *Presented by the Zone Team*
+
+---
+
+<!-- Tetragon Architecture -->
+<!-- _class: lead -->
+
+## Tetragon Architectural Diagram
+
+![](https://tetragon.io/svgs/diagram-illustration.svg)
 
 ---
 
@@ -82,6 +91,8 @@ Tetragon is a flexible Kubernetes-aware security observability and runtime enfor
 
 ## What is Tetragon? (cont.)
 
+**eBPF-based Security Observability and Runtime Enforcement**
+
 ![bg left:20%](./img/canada-1.png)
 ![w:128px](https://tetragon.io/images/home/hero-illustration.png)
 
@@ -125,16 +136,20 @@ Security monitoring from the kernel up.
 - Memory safe – can only access designated stack, maps, context
 - Resource bounded – ~1M instructions max, 512 bytes stack
 
+<br>
+
 <blockquote>
 Provably safe code in the kernel – verified before loading.
 </blockquote>
 
 ---
 
-<!-- Tetragon Architecture -->
+<!-- eBPF Architecture -->
 <!-- _class: lead -->
 
-![](https://tetragon.io/svgs/diagram-illustration.svg)
+## eBPF Architecture
+
+![](https://ebpf.io/static/e293240ecccb9d506587571007c36739/691bc/overview.webp)
 
 ---
 
