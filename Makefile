@@ -24,6 +24,12 @@ REPORT_OUTPUT_EN = tetragon-ebpf-report-en.pdf
 REPORT_TYP_FR = report/report-fr.typ
 REPORT_OUTPUT_FR = tetragon-ebpf-report-fr.pdf
 
+# GitHub Pages site
+SITE_DIR = $(TEMP_DIR)/site
+HTML_EN = $(TEMP_DIR)/slides-en.html
+HTML_FR = $(TEMP_DIR)/slides-fr.html
+LANDING_PAGE = config/landing.html
+
 # Default target
 all: pdf reports
 
@@ -61,6 +67,18 @@ report-en:
 	typst compile $(REPORT_TYP_EN) $(REPORT_OUTPUT_EN)
 	@echo "Report built: $(REPORT_OUTPUT_EN)"
 
+# Build both presentations and landing page as HTML for GitHub Pages
+html: setup combine-en combine-fr
+	@echo "Building HTML presentations for GitHub Pages..."
+	mkdir -p $(SITE_DIR)
+	marp --html --allow-local-files --output $(HTML_EN) $(COMBINED_MD_EN)
+	marp --html --allow-local-files --output $(HTML_FR) $(COMBINED_MD_FR)
+	cp $(HTML_EN) $(SITE_DIR)/en.html
+	cp $(HTML_FR) $(SITE_DIR)/fr.html
+	cp $(LANDING_PAGE) $(SITE_DIR)/index.html
+	cp -r $(IMG_DIR) $(SITE_DIR)/img
+	@echo "Site built in $(SITE_DIR): index.html, en.html, fr.html"
+
 # Build French report only
 report-fr:
 	@echo "Building French report PDF (Typst)..."
@@ -94,12 +112,12 @@ clean:
 deps:
 	@echo "Installing Marp CLI and Chromium..."
 	npm install -g @marp-team/marp-cli
-	sudo apt-get update && sudo apt-get install -y chromium-browser
+	sudo apt-get update && sudo apt-get install -y chromium --no-install-recommends
 
 # Install Chromium only (if Marp already installed)
 install-chromium:
 	@echo "Installing Chromium..."
-	sudo apt-get update && sudo apt-get install -y chromium-browser
+	sudo apt-get update && sudo apt-get install -y chromium --no-install-recommends
 
 # Check if Marp is installed
 check-marp:
@@ -133,6 +151,7 @@ help:
 	@echo "  all            - Build both PDFs and reports (default)"
 	@echo "  pdf            - Build both presentation PDFs"
 	@echo "  reports        - Build both report PDFs"
+	@echo "  html           - Build both presentations as HTML for GitHub Pages"
 	@echo "  pdf-en         - Build English presentation PDF only"
 	@echo "  pdf-fr         - Build French presentation PDF only"
 	@echo "  report-en      - Build English report PDF only"
@@ -145,4 +164,4 @@ help:
 	@echo "  clean          - Remove generated files"
 	@echo "  help           - Show this help message"
 
-.PHONY: all pdf pdf-en pdf-fr reports report-en report-fr setup combine-en combine-fr clean deps install-chromium preview-en preview-fr open help check-marp
+.PHONY: all pdf pdf-en pdf-fr reports report-en report-fr html setup combine-en combine-fr clean deps install-chromium preview-en preview-fr open help check-marp

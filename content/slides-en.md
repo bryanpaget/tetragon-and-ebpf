@@ -124,7 +124,7 @@ Move computation to data, not data to computation.
 - **Process starts:** `sys_enter_execve`
 - **File reads:** `vfs_read`
 - **TCP connections:** `tcp_connect`
-- **DNS queries:** `udp_recvmsg:53`
+- **DNS queries:** `udp_recvmsg` (kprobe on DNS traffic, filtered by destination port 53)
 
 **In our Kubeflow cluster:**
 - **Jupyter notebooks** – detect shell escapes via `sys_execve`
@@ -168,7 +168,7 @@ tetra getevents -o compact
 
 # Filter by namespace and pod
 tetra getevents --namespace default \
-  --field-selector "process.pod.name=my-app"
+  --pods my-app
 
 # Export to JSON for further processing
 tetra getevents -o json | jq '.process.exec'
@@ -196,16 +196,17 @@ kind: TracingPolicy
 metadata:
   name: monitor-curl
 spec:
-  podSelector:
-    matchLabels:
-      app: my-app
-  hooks:
-    - path: /usr/bin/curl
-      syscalls:
-        - execve
-      args:
-        - action: Post
-          valueFd: 1
+  kprobes:
+  - call: sys_execve
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchBinaries:
+      - operator: "In"
+        values:
+        - "/usr/bin/curl"
 ```
 
 **Deployed via GitOps (ArgoCD)** – automated sync, version control, rollback.
@@ -244,12 +245,17 @@ Count of shell executions per namespace in last hour.
 Programmatic access for custom integrations (SIEM, automation, alerting).
 
 ```python
-import tetragon_grpc
+import grpc
+from tetragon import sensors_pb2_grpc, events_pb2
 
-client = tetragon_grpc.TetragonClient()
-for event in client.get_events():
-    if event.process.exec.binary == "/bin/bash":
-        print(f"Shell detected in {event.process.pod.namespace}")
+channel = grpc.insecure_channel("localhost:54321")
+stub = sensors_pb2_grpc.FineGuidanceSensorsStub(channel)
+
+for event in stub.GetEvents(events_pb2.GetEventsRequest()):
+    if event.process_exec:
+        if event.process_exec.process.binary == "/bin/bash":
+            ns = event.process_exec.process.pod.namespace
+            print(f"Shell detected in namespace {ns}")
 ```
 
 ### Use cases:

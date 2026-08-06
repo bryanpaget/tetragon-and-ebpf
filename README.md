@@ -11,6 +11,36 @@
 
 ---
 
+## About This Repository
+
+This repository contains the source for a bilingual (English/French) research deliverable on Tetragon and eBPF. It builds presentation slides (via [Marp](https://marp.app/)) and technical reports (via [Typst](https://typst.app/)), and publishes the slides as HTML to GitHub Pages.
+
+| Path | Description |
+|------|-------------|
+| `content/slides-en.md` | English Marp presentation source |
+| `content/slides-fr.md` | French Marp presentation source |
+| `report/report-en.typ` | English technical report (Typst) |
+| `report/report-fr.typ` | French technical report (Typst) |
+| `config/header.md` | Shared Marp theme and front-matter |
+| `config/landing.html` | GitHub Pages landing page |
+| `img/` | Slide images |
+| `.github/workflows/` | CI (build), release, and GitHub Pages deployments |
+
+**View the slides online:** <https://bryanpaget.github.io/tetragon-and-ebpf/>
+
+### Build Locally
+
+```bash
+make pdf       # EN + FR presentation PDFs (requires marp CLI + Chromium)
+make reports   # EN + FR report PDFs (requires typst)
+make html      # GitHub Pages site into temp/site
+make preview-en / preview-fr   # live slide preview on localhost
+```
+
+> **Note on deployments:** a push to `main` builds and deploys the HTML slides to GitHub Pages (source must be set to "GitHub Actions" in the repo's Pages settings). Tagging a release with `v*` builds the PDFs and attaches them to a GitHub Release.
+
+---
+
 ## Executive Summary
 
 **Recommendation:** Adopt Tetragon as our eBPF‑based security observability solution and contribute the Helm chart to `cloudnative-platform-charts` for organisation‑wide use.
@@ -157,10 +187,10 @@ With the foundation established, we can now understand precisely how Tetragon us
 
 | Observability Target | eBPF Hook Type | Kernel Function/Event |
 |----------------------|----------------|------------------------|
-| Process execution    | Tracepoint     | `sys_enter_execve`     |
-| File access          | Kprobe         | `vfs_read`             |
-| Network connections  | Tracepoint     | `tcp_connect`          |
-| DNS queries          | Kprobe         | `udp_recvmsg:53`       |
+| Process execution    | Tracepoint     | `sys_enter_execve`      |
+| File access          | Kprobe         | `vfs_read`              |
+| Network connections  | Kprobe         | `tcp_connect`           |
+| DNS queries          | Kprobe         | `udp_recvmsg` (DPort 53) |
 
 **Why these hooks?**
 - `sys_*` – system call entry/exit (high‑level process activity).  
@@ -209,22 +239,22 @@ This policy attaches to the `execve` system call, captures the command line argu
 
 ```json
 {
-  "node": "worker-node-01",
-  "time": "2026-03-23T14:32:15.123Z",
-  "event_type": "process_exec",
-  "process": {
-    "exec_id": "V29ya2VyLW5vZGUtMDE6MTIzNDU2Nzg5MA==",
-    "pid": 12345,
-    "ppid": 12340,
-    "binary": "/bin/bash",
-    "arguments": "cat /etc/passwd",
-    "cwd": "/home/user"
+  "process_exec": {
+    "process": {
+      "exec_id": "V29ya2VyLW5vZGUtMDE6MTIzNDU2Nzg5MA==",
+      "pid": 12345,
+      "ppid": 12340,
+      "binary": "/bin/bash",
+      "arguments": "cat /etc/passwd",
+      "cwd": "/home/user",
+      "pod": {
+        "namespace": "default",
+        "name": "test-pod"
+      }
+    }
   },
-  "pod": {
-    "namespace": "default",
-    "name": "test-pod"
-  },
-  "action": "generate_event"
+  "node_name": "worker-node-01",
+  "time": "2026-03-23T14:32:15.123Z"
 }
 ```
 
@@ -240,8 +270,7 @@ helm repo add cilium https://helm.cilium.io
 helm repo update
 
 # 2. Create namespace and install Tetragon
-kubectl create namespace tetragon
-helm install tetragon cilium/tetragon -n tetragon
+helm install tetragon cilium/tetragon -n tetragon --create-namespace
 
 # 3. Verify installation
 kubectl -n tetragon get pods
@@ -291,7 +320,7 @@ tetra getevents -o compact
 
 # Filter by namespace and pod
 tetra getevents --namespace default \
-  --field-selector "process.pod.name=my-app"
+  --pods my-app
 ```
 
 **TracingPolicies as Code:**
@@ -304,10 +333,14 @@ tetra getevents --namespace default \
 
 **gRPC API:**
 ```python
-import tetragon_grpc
-client = tetragon_grpc.TetragonClient()
-for event in client.get_events():
-    print(event.process.exec)
+import grpc
+from tetragon import sensors_pb2_grpc, events_pb2
+
+channel = grpc.insecure_channel("localhost:54321")
+stub = sensors_pb2_grpc.FineGuidanceSensorsStub(channel)
+
+for event in stub.GetEvents(events_pb2.GetEventsRequest()):
+    print(event)
 ```
 
 ### 5.5 Prerequisites
@@ -557,10 +590,10 @@ Avec la base établie, nous pouvons maintenant comprendre précisément comment 
 
 | Cible d'observabilité | Type de point d'attache eBPF | Fonction/Événement du noyau |
 |-----------------------|-----------------------------|-----------------------------|
-| Exécution de processus | Tracepoint                  | `sys_enter_execve`          |
-| Accès aux fichiers     | Kprobe                      | `vfs_read`                  |
-| Connexions réseau      | Tracepoint                  | `tcp_connect`               |
-| Requêtes DNS           | Kprobe                      | `udp_recvmsg:53`            |
+| Exécution de processus | Tracepoint                  | `sys_enter_execve`           |
+| Accès aux fichiers     | Kprobe                      | `vfs_read`                   |
+| Connexions réseau      | Kprobe                      | `tcp_connect`                |
+| Requêtes DNS           | Kprobe                      | `udp_recvmsg` (port 53)      |
 
 **Pourquoi ces hooks ?**
 - `sys_*` – entrée/sortie des appels système (activité de processus de haut niveau).  
@@ -609,22 +642,22 @@ Cette politique s'attache à l'appel système `execve`, capture l'argument de li
 
 ```json
 {
-  "node": "worker-node-01",
-  "time": "2026-03-23T14:32:15.123Z",
-  "event_type": "process_exec",
-  "process": {
-    "exec_id": "V29ya2VyLW5vZGUtMDE6MTIzNDU2Nzg5MA==",
-    "pid": 12345,
-    "ppid": 12340,
-    "binary": "/bin/bash",
-    "arguments": "cat /etc/passwd",
-    "cwd": "/home/user"
+  "process_exec": {
+    "process": {
+      "exec_id": "V29ya2VyLW5vZGUtMDE6MTIzNDU2Nzg5MA==",
+      "pid": 12345,
+      "ppid": 12340,
+      "binary": "/bin/bash",
+      "arguments": "cat /etc/passwd",
+      "cwd": "/home/user",
+      "pod": {
+        "namespace": "default",
+        "name": "test-pod"
+      }
+    }
   },
-  "pod": {
-    "namespace": "default",
-    "name": "test-pod"
-  },
-  "action": "generate_event"
+  "node_name": "worker-node-01",
+  "time": "2026-03-23T14:32:15.123Z"
 }
 ```
 
@@ -640,8 +673,7 @@ helm repo add cilium https://helm.cilium.io
 helm repo update
 
 # 2. Créer le namespace et installer Tetragon
-kubectl create namespace tetragon
-helm install tetragon cilium/tetragon -n tetragon
+helm install tetragon cilium/tetragon -n tetragon --create-namespace
 
 # 3. Vérifier l'installation
 kubectl -n tetragon get pods
@@ -691,7 +723,7 @@ tetra getevents -o compact
 
 # Filtrer par namespace et pod
 tetra getevents --namespace default \
-  --field-selector "process.pod.name=my-app"
+  --pods my-app
 ```
 
 **TracingPolicies comme code :**
@@ -704,10 +736,14 @@ tetra getevents --namespace default \
 
 **API gRPC :**
 ```python
-import tetragon_grpc
-client = tetragon_grpc.TetragonClient()
-for event in client.get_events():
-    print(event.process.exec)
+import grpc
+from tetragon import sensors_pb2_grpc, events_pb2
+
+channel = grpc.insecure_channel("localhost:54321")
+stub = sensors_pb2_grpc.FineGuidanceSensorsStub(channel)
+
+for event in stub.GetEvents(events_pb2.GetEventsRequest()):
+    print(event)
 ```
 
 ### 5.5 Prérequis

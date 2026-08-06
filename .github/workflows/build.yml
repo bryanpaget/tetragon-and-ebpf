@@ -1,84 +1,62 @@
-name: Build Marp Slides PDFs
+name: Build Slides and Reports
 
 on:
   push:
-    branches: [fall-2025]
+    branches: [main]
   pull_request:
-    branches: [fall-2025]
+    branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
+    name: Build PDFs
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "18"
+          node-version: "20"
 
       - name: Install Marp CLI
         run: npm install -g @marp-team/marp-cli
 
-      - name: Create combined markdown files
-        run: |
-          mkdir -p temp
-          cat config/header.md content/slides-en.md > temp/slides-en-combined.md
+      - name: Install Chromium for Marp PDF export
+        run: sudo apt-get update && sudo apt-get install -y chromium --no-install-recommends
 
-      - name: Copy images to temp directory
+      - name: Install Typst
         run: |
-          cp -r img temp/
+          wget https://github.com/typst/typst/releases/latest/download/typst-x86_64-unknown-linux-musl.tar.xz
+          tar -xf typst-x86_64-unknown-linux-musl.tar.xz
+          mv typst-x86_64-unknown-linux-musl/typst /usr/local/bin/
+          chmod +x /usr/local/bin/typst
 
-      - name: Build PDF
+      - name: Build all PDFs via Makefile
         run: |
-          marp temp/slides-en-combined.md --pdf --output the-zone-demo-fall-2025.pdf --allow-local-files
+          make pdf reports
 
-      - name: Verify PDF exists
+      - name: Verify PDFs exist
         run: |
-          if [ -f the-zone-demo-fall-2025.pdf ]; then
-            echo "PDF built successfully"
-            ls -la *.pdf
-          else
-            echo "PDF not built!"
-            exit 1
-          fi
+          for f in tetragon-ebpf-presentation-en.pdf tetragon-ebpf-presentation-fr.pdf tetragon-ebpf-report-en.pdf tetragon-ebpf-report-fr.pdf; do
+            if [ -f "$f" ]; then
+              echo "OK: $f ($(du -h "$f" | cut -f1))"
+            else
+              echo "MISSING: $f"
+              exit 1
+            fi
+          done
 
-      - name: Upload PDF artifact
+      - name: Upload PDF artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: zone-demo-pdf
-          path: the-zone-demo-fall-2025.pdf
-          retention-days: 30
-
-      # Only on push to fall-2025 (not PRs)
-      - name: Auto-tag and release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/fall-2025'
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Configure Git
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Generate tag name
-          TAG_NAME="auto/v$(date -u +%Y.%m.%d)-run${{ github.run_number }}"
-          echo "Using tag: $TAG_NAME"
-
-          # Create and push tag
-          git tag "$TAG_NAME"
-          git push origin "$TAG_NAME"
-
-          # Create release using GitHub CLI (pre-installed on runner)
-          gh release create "$TAG_NAME" the-zone-demo-fall-2025.pdf \
-            --title "Auto Release – $(date -u +%Y-%m-%d) (Run ${{ github.run_number }})" \
-            --notes "Automatically generated release for The Zone Fall 2025 demo.
-
-          - Built from commit ${{ github.sha }}
-          - Triggered by push to \`fall-2025\`
-          - Run #${{ github.run_number }}"
+          name: tetragon-ebpf-pdfs
+          path: |
+            tetragon-ebpf-presentation-en.pdf
+            tetragon-ebpf-presentation-fr.pdf
+            tetragon-ebpf-report-en.pdf
+            tetragon-ebpf-report-fr.pdf
+          retention-days: 14

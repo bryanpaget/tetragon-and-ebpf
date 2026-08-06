@@ -183,7 +183,7 @@ Cette dynamique de l'écosystème indique qu'eBPF devient un [*mécanisme centra
   columns: (1fr, 1fr, 1fr),
   inset: 6pt,
   [Exigence], [Minimum], [Recommandé],
-  [Noyau Linux], [4.19], [5.8+ pour fonctionnalités eBPF],
+  [Noyau Linux], [4.19], [5.4+ pour CO-RE (BTF)],
   [Kubernetes], [1.20], [1.25+],
   [Mémoire nœud], [2 Go], [4 Go+],
   [CPU nœud], [1 cœur], [2+ cœurs],
@@ -203,11 +203,11 @@ helm repo update
 
 === Étape 2 : Déployer Tetragon
 
-Installer dans le namespace `kube-system` avec l'API gRPC activée pour l'CLI `tetra` :
+Installer dans le namespace `tetragon` avec l'API gRPC activée pour l'CLI `tetra` :
 
 ```bash
 helm install tetragon cilium/tetragon \
-  --namespace kube-system \
+  --namespace tetragon \
   --create-namespace \
   --set tetragon.grpc.enabled=true
 ```
@@ -217,8 +217,8 @@ helm install tetragon cilium/tetragon \
 Attendre le déploiement et confirmer que les pods sont en cours d'exécution :
 
 ```bash
-kubectl rollout status -n kube-system ds/tetragon -w
-kubectl get pods -n kube-system -l app.kubernetes.io/name=tetragon
+kubectl rollout status -n tetragon ds/tetragon -w
+kubectl get pods -n tetragon -l app.kubernetes.io/name=tetragon
 ```
 
 == Interagir avec Tetragon
@@ -227,7 +227,7 @@ Une fois installé, utilisez l'CLI `tetra` pour voir les événements de sécuri
 
 ```bash
 # Port-forward vers un pod Tetragon
-kubectl port-forward -n kube-system ds/tetragon 54321:54321
+kubectl port-forward -n tetragon ds/tetragon 54321:54321
 
 # Voir les événements en format compact
 tetra getevents -o compact
@@ -281,7 +281,7 @@ tetra getevents -o compact
 
 # Surveiller un namespace spécifique
 tetra getevents --namespace default \
-  --field-selector "process.pod.name=my-app"
+  --pods my-app
 ```
 
 === TracingPolicies as Code
@@ -297,16 +297,17 @@ kind: TracingPolicy
 metadata:
   name: monitor-curl
 spec:
-  podSelector:
-    matchLabels:
-      app: my-app
-  hooks:
-    - path: /usr/bin/curl
-      syscalls:
-        - execve
-      args:
-        - action: Post
-          valueFd: 1
+  kprobes:
+  - call: sys_execve
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchBinaries:
+      - operator: "In"
+        values:
+        - "/usr/bin/curl"
 ```
 
 === Export d'événements et tableaux de bord
@@ -321,11 +322,14 @@ spec:
 Accès programmatique pour les intégrations personnalisées (SIEM, automatisation) :
 
 ```python
-import tetragon_grpc
+import grpc
+from tetragon import sensors_pb2_grpc, events_pb2
 
-client = tetragon_grpc.TetragonClient()
-for event in client.get_events():
-    print(event.process.exec)
+channel = grpc.insecure_channel("localhost:54321")
+stub = sensors_pb2_grpc.FineGuidanceSensorsStub(channel)
+
+for event in stub.GetEvents(events_pb2.GetEventsRequest()):
+    print(event)
 ```
 
 === GitOps avec ArgoCD

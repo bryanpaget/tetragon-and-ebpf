@@ -124,7 +124,7 @@ Déplacer le calcul vers les données, pas les données vers le calcul.
 - **Démarrage de processus :** `sys_enter_execve`
 - **Lectures de fichiers :** `vfs_read`
 - **Connexions TCP :** `tcp_connect`
-- **Requêtes DNS :** `udp_recvmsg:53`
+- **Requêtes DNS :** `udp_recvmsg` (kprobe sur le trafic DNS, filtré par le port de destination 53)
 
 **Dans notre grappe Kubeflow :**
 - **Carnets Jupyter** – détection d’échappements de shell via `sys_execve`
@@ -168,7 +168,7 @@ tetra getevents -o compact
 
 # Filtrer par espace de noms et pod
 tetra getevents --namespace default \
-  --field-selector "process.pod.name=my-app"
+  --pods my-app
 
 # Exporter en JSON pour traitement ultérieur
 tetra getevents -o json | jq '.process.exec'
@@ -196,16 +196,17 @@ kind: TracingPolicy
 metadata:
   name: monitor-curl
 spec:
-  podSelector:
-    matchLabels:
-      app: my-app
-  hooks:
-    - path: /usr/bin/curl
-      syscalls:
-        - execve
-      args:
-        - action: Post
-          valueFd: 1
+  kprobes:
+  - call: sys_execve
+    syscall: true
+    args:
+    - index: 0
+      type: "string"
+    selectors:
+    - matchBinaries:
+      - operator: "In"
+        values:
+        - "/usr/bin/curl"
 ```
 
 **Déployées via GitOps (ArgoCD)** – synchronisation automatique, contrôle de version, retour arrière possible.
@@ -244,12 +245,17 @@ Nombre d'exécutions de shell par espace de noms dans la dernière heure.
 Accès programmatique pour des intégrations personnalisées (SIEM, automatisation, alertes).
 
 ```python
-import tetragon_grpc
+import grpc
+from tetragon import sensors_pb2_grpc, events_pb2
 
-client = tetragon_grpc.TetragonClient()
-for event in client.get_events():
-    if event.process.exec.binary == "/bin/bash":
-        print(f"Shell détecté dans {event.process.pod.namespace}")
+channel = grpc.insecure_channel("localhost:54321")
+stub = sensors_pb2_grpc.FineGuidanceSensorsStub(channel)
+
+for event in stub.GetEvents(events_pb2.GetEventsRequest()):
+    if event.process_exec:
+        if event.process_exec.process.binary == "/bin/bash":
+            ns = event.process_exec.process.pod.namespace
+            print(f"Shell détecté dans l'espace de noms {ns}")
 ```
 
 ### Cas d'usage :
