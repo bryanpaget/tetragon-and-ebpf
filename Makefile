@@ -25,9 +25,7 @@ REPORT_TYP_FR = report/report-fr.typ
 REPORT_OUTPUT_FR = tetragon-ebpf-report-fr.pdf
 
 # GitHub Pages site
-SITE_DIR = $(TEMP_DIR)/site
-HTML_EN = $(TEMP_DIR)/slides-en.html
-HTML_FR = $(TEMP_DIR)/slides-fr.html
+SITE_DIR = docs
 LANDING_PAGE = config/landing.html
 
 # Default target
@@ -69,15 +67,14 @@ report-en:
 
 # Build both presentations and landing page as HTML for GitHub Pages
 html: setup combine-en combine-fr
-	@echo "Building HTML presentations for GitHub Pages..."
+	@echo "Building HTML presentations into $(SITE_DIR)/ for GitHub Pages..."
 	mkdir -p $(SITE_DIR)
-	marp --html --allow-local-files --output $(HTML_EN) $(COMBINED_MD_EN)
-	marp --html --allow-local-files --output $(HTML_FR) $(COMBINED_MD_FR)
-	cp $(HTML_EN) $(SITE_DIR)/en.html
-	cp $(HTML_FR) $(SITE_DIR)/fr.html
+	marp --html --allow-local-files --output $(SITE_DIR)/en.html $(COMBINED_MD_EN)
+	marp --html --allow-local-files --output $(SITE_DIR)/fr.html $(COMBINED_MD_FR)
 	cp $(LANDING_PAGE) $(SITE_DIR)/index.html
 	cp -r $(IMG_DIR) $(SITE_DIR)/img
-	@echo "Site built in $(SITE_DIR): index.html, en.html, fr.html"
+	touch $(SITE_DIR)/.nojekyll
+	@echo "Site built in $(SITE_DIR)/: index.html, en.html, fr.html, img/"
 
 # Build French report only
 report-fr:
@@ -151,7 +148,7 @@ help:
 	@echo "  all            - Build both PDFs and reports (default)"
 	@echo "  pdf            - Build both presentation PDFs"
 	@echo "  reports        - Build both report PDFs"
-	@echo "  html           - Build both presentations as HTML for GitHub Pages"
+	@echo "  html           - Build both presentations as HTML into docs/ (GitHub Pages)"
 	@echo "  pdf-en         - Build English presentation PDF only"
 	@echo "  pdf-fr         - Build French presentation PDF only"
 	@echo "  report-en      - Build English report PDF only"

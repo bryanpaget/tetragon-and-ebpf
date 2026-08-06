@@ -13,7 +13,7 @@
 
 ## About This Repository
 
-This repository contains the source for a bilingual (English/French) research deliverable on Tetragon and eBPF. It builds presentation slides (via [Marp](https://marp.app/)) and technical reports (via [Typst](https://typst.app/)), and publishes the slides as HTML to GitHub Pages.
+This repository contains the source for a bilingual (English/French) research deliverable on Tetragon and eBPF. It builds presentation slides (via [Marp](https://marp.app/)) and technical reports (via [Typst](https://typst.app/)), and publishes the slides as HTML to GitHub Pages from the `docs/` folder.
 
 | Path | Description |
 |------|-------------|
@@ -22,9 +22,10 @@ This repository contains the source for a bilingual (English/French) research de
 | `report/report-en.typ` | English technical report (Typst) |
 | `report/report-fr.typ` | French technical report (Typst) |
 | `config/header.md` | Shared Marp theme and front-matter |
-| `config/landing.html` | GitHub Pages landing page |
+| `config/landing.html` | GitHub Pages landing page (copied to `docs/index.html`) |
 | `img/` | Slide images |
-| `.github/workflows/` | CI (build), release, and GitHub Pages deployments |
+| `docs/` | Generated GitHub Pages site (built via `make html`, committed) |
+| `.github/workflows/` | CI (build) and release workflows |
 
 **View the slides online:** <https://bryanpaget.github.io/tetragon-and-ebpf/>
 
@@ -33,11 +34,11 @@ This repository contains the source for a bilingual (English/French) research de
 ```bash
 make pdf       # EN + FR presentation PDFs (requires marp CLI + Chromium)
 make reports   # EN + FR report PDFs (requires typst)
-make html      # GitHub Pages site into temp/site
+make html      # GitHub Pages site into docs/
 make preview-en / preview-fr   # live slide preview on localhost
 ```
 
-> **Note on deployments:** a push to `main` builds and deploys the HTML slides to GitHub Pages (source must be set to "GitHub Actions" in the repo's Pages settings). Tagging a release with `v*` builds the PDFs and attaches them to a GitHub Release.
+> **Note on deployments:** GitHub Pages serves the committed `docs/` folder (repo **Settings → Pages → Source → "Deploy from a branch" → branch `main`, folder `/docs`**). After editing slides, run `make html` and commit the regenerated `docs/`; the site updates on push. Tagging a release with `v*` builds the PDFs and attaches them to a GitHub Release.
 
 ---
 

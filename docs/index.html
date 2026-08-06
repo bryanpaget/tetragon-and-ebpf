@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tetragon and eBPF | Statistics Canada</title>
+  <style>
+    :root {
+      --primary: #26374a;
+      --secondary: #ea5936;
+      --accent: #3e6ca7;
+      --light: #f5f5f5;
+      --text: #333;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--light);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 30px rgba(38, 55, 74, 0.12);
+      padding: 3rem;
+      max-width: 720px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      color: var(--primary);
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+    .subtitle {
+      color: var(--secondary);
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    .meta {
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 2rem;
+    }
+    .links {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    a.btn {
+      display: block;
+      text-decoration: none;
+      background: var(--primary);
+      color: #fff;
+      padding: 1.25rem 1rem;
+      border-radius: 8px;
+      font-weight: 600;
+      transition: background 0.2s ease, transform 0.1s ease;
+    }
+    a.btn:hover { background: var(--accent); transform: translateY(-2px); }
+    a.btn small { display: block; font-weight: 400; opacity: 0.85; margin-top: 0.25rem; }
+    .foot { font-size: 0.85rem; color: #888; margin-top: 1rem; }
+    .foot a { color: var(--accent); text-decoration: none; }
+    @media (max-width: 560px) { .links { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="img/tetragon-shield.png" alt="Tetragon" width="96" height="96">
+    <h1>Tetragon and eBPF</h1>
+    <div class="subtitle">Security Observability from the Kernel Up</div>
+    <p class="meta">Statistics Canada &middot; Zone Team &middot; 2026-03-30</p>
+
+    <div class="links">
+      <a class="btn" href="en.html">English Presentation
+        <small>View slides (HTML)</small>
+      </a>
+      <a class="btn" href="fr.html">Présentation en français
+        <small>Voir les diapositives (HTML)</small>
+      </a>
+    </div>
+
+    <p class="foot">
+      <a href="https://tetragon.io">tetragon.io</a> &middot;
+      <a href="https://github.com/cilium/tetragon">github.com/cilium/tetragon</a>
+    </p>
+  </div>
+</body>
+</html>
